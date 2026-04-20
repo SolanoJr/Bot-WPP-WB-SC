@@ -1,6 +1,6 @@
 # Bot-WPP-WB-SC
 
-Bot de WhatsApp baseado em `whatsapp-web.js` com carregamento automatico de comandos, tratamento centralizado de respostas e testes automatizados.
+Bot de WhatsApp baseado em `whatsapp-web.js` com carregamento automatico de comandos, tratamento centralizado de respostas, autorizacao remota por numero e testes automatizados.
 
 ## 1. Descricao do projeto
 
@@ -18,6 +18,8 @@ Exemplos:
 - Node.js
 - `whatsapp-web.js`
 - `qrcode-terminal`
+- `axios`
+- `dotenv`
 - Jest
 
 ## 3. Requisitos
@@ -40,6 +42,20 @@ cd bot-wpp
 
 ```bash
 npm install
+```
+
+### Configurar ambiente
+
+1. Crie um arquivo `.env` na raiz do projeto
+2. Use `.env.example` como base
+
+Exemplo:
+
+```env
+LICENSE_API_URL=http://127.0.0.1:4010/licenca
+LOCAL_AUTHORIZED_NUMBERS=5511999999999@c.us,5511888888888@c.us
+LICENSE_REVALIDATION_INTERVAL_MS=300000
+ADMIN_NUMBERS=5511999999999@c.us,5511888888888@c.us
 ```
 
 ### Iniciar o bot
@@ -71,6 +87,8 @@ Camada principal de orquestracao. Responsavel por:
 - extrair nome do comando e argumentos
 - montar o `context`
 - encaminhar a execucao para o executor central
+- validar a licenca do numero conectado na inicializacao
+- revalidar a licenca periodicamente sem derrubar o bot em runtime
 
 ### `commands/`
 
@@ -96,6 +114,8 @@ Contem servicos centrais da aplicacao:
 
 - `replyService.js`: envio de texto e erro
 - `commandExecutor.js`: execucao padronizada de comandos
+- `loggerService.js`: logging estruturado
+- `authService.js`: autorizacao remota, fallback local e revalidacao
 
 ## 6. Como adicionar um novo comando
 
@@ -124,6 +144,85 @@ module.exports = {
 
 Depois disso, reinicie o bot. O loader carrega automaticamente os arquivos validos da pasta `commands/`.
 
+## 6.1 Configuracao de autorizacao
+
+Variaveis suportadas em `.env`:
+
+- `LICENSE_API_URL`: URL da API remota de licenca
+- `LOCAL_AUTHORIZED_NUMBERS`: numeros autorizados localmente separados por virgula
+- `LICENSE_REVALIDATION_INTERVAL_MS`: intervalo da revalidacao em milissegundos
+- `ADMIN_NUMBERS`: numeros com permissao para comandos administrativos
+
+Comportamento:
+
+- na inicializacao, o bot consulta a API remota
+- se a API falhar, o fallback `LOCAL_AUTHORIZED_NUMBERS` sempre e usado como backup
+- se o numero nao estiver autorizado nem remotamente nem no fallback, o bot bloqueia na inicializacao
+- depois que o bot sobe, a revalidacao periodica apenas loga problemas e nao derruba o processo
+
+## 6.2 Mock local de API
+
+Para testar sem backend real:
+
+```bash
+npm run mock:license
+```
+
+O mock sobe por padrao em:
+
+```text
+http://127.0.0.1:4010/licenca
+```
+
+Exemplo de chamada:
+
+```text
+http://127.0.0.1:4010/licenca?numero=5511999999999@c.us
+```
+
+Resposta:
+
+```json
+{ "authorized": true }
+```
+
+## Como outro desenvolvedor comecar (ex: Caio)
+
+1. Clonar o repositorio
+
+```bash
+git clone <URL_DO_REPOSITORIO>
+cd bot-wpp
+```
+
+2. Instalar dependencias
+
+```bash
+npm install
+```
+
+3. Criar `.env` com base em `.env.example`
+
+4. Subir o mock de licenca se quiser testar sem backend real
+
+```bash
+npm run mock:license
+```
+
+5. Iniciar o bot
+
+```bash
+npm start
+```
+
+6. Escanear o QR code no WhatsApp
+
+7. Testar um comando simples
+
+```text
+!ping
+```
+
 ## 7. Como rodar os testes
 
 ```bash
@@ -147,16 +246,25 @@ bot-wpp/
 │  ├─ help.js
 │  ├─ info.js
 │  ├─ ping.js
-│  └─ test.js
+│  ├─ status.js
+│  ├─ test.js
+│  ├─ welcome.js
+│  └─ admin.js
 ├─ services/
+│  ├─ authService.js
 │  ├─ commandExecutor.js
+│  ├─ loggerService.js
 │  └─ replyService.js
+├─ mock-license-api.js
+├─ license.js
+├─ authService.js
 ├─ utils/
 │  ├─ validator.js
 │  └─ validator.test.js
 ├─ index.js
 ├─ whatsapp.js
 ├─ whatsapp.test.js
+├─ .env.example
 ├─ package.json
 ├─ package-lock.json
 └─ .gitignore
@@ -167,8 +275,10 @@ bot-wpp/
 - Nao versione `.wwebjs_auth/`
 - Nao versione `.wwebjs_cache/`
 - Nao versione `node_modules/`
+- Nao versione `.env`
 - O estado de autenticacao do WhatsApp fica em `.wwebjs_auth/`
 - Se esse diretorio for apagado, sera necessario escanear o QR Code novamente
+- `LOCAL_AUTHORIZED_NUMBERS` funciona como fallback de seguranca quando a API remota falha
 
 ## 10. Troubleshooting basico
 
@@ -183,6 +293,18 @@ bot-wpp/
 - Confirme que a mensagem comeca com `!`
 - Confirme que o comando existe na pasta `commands/`
 - Reinicie o bot depois de adicionar ou alterar comandos
+
+### O bot bloqueia na inicializacao
+
+- Verifique se `LICENSE_API_URL` esta correto
+- Verifique se o numero do bot existe na autorizacao remota
+- Se a API estiver fora, confirme se o numero esta presente em `LOCAL_AUTHORIZED_NUMBERS`
+
+### Quero testar a licenca localmente
+
+- Rode `npm run mock:license`
+- Aponte `LICENSE_API_URL` para `http://127.0.0.1:4010/licenca`
+- Defina `MOCK_AUTHORIZED_NUMBERS` se quiser mudar quem o mock autoriza
 
 ### O bot responde erro ao executar comando
 
@@ -200,4 +322,7 @@ bot-wpp/
 - `!help`: lista os comandos disponiveis
 - `!info`: mostra horario atual, id do chat e quantidade de argumentos
 - `!ping`: responde com `pong`
+- `!status`: mostra status, quantidade de comandos e timestamp
 - `!test`: responde com `comando test funcionando`
+- `!welcome`: exemplo de comando simples para onboarding
+- `!admin status|auth|commands`: comandos administrativos para numeros autorizados
