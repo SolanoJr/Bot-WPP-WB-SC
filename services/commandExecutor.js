@@ -1,14 +1,16 @@
+const logger = require('./loggerService');
 const replyService = require('./replyService');
 
 const executeCommand = async (command, context) => {
     const commandName = command?.name || 'desconhecido';
+    const serializedArgs = Array.isArray(context?.args) ? context.args.join(', ') : '';
 
-    console.log(`Executando comando: ${commandName}`);
+    logger.info(`Executando comando: ${commandName}${serializedArgs ? ` | args: ${serializedArgs}` : ' | args: nenhum'}`);
 
     try {
         const value = await command.execute(context.message, context.args, context);
 
-        console.log(`Comando executado com sucesso: ${commandName}`);
+        logger.info(`Comando executado com sucesso: ${commandName}`);
 
         return {
             success: true,
@@ -17,7 +19,7 @@ const executeCommand = async (command, context) => {
             error: null
         };
     } catch (error) {
-        console.error(`Erro ao executar comando ${commandName}:`, error);
+        logger.error(`Erro ao executar comando ${commandName}.`, error);
         await replyService.sendError(context, 'Erro ao executar comando');
 
         return {

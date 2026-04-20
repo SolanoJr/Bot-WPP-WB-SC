@@ -3,7 +3,16 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const fs = require('fs');
 const path = require('path');
 const { executeCommand } = require('./services/commandExecutor');
+const logger = require('./services/loggerService');
 const replyService = require('./services/replyService');
+const {
+    checkLicense,
+    createLicenseRevalidator,
+    getAuthStatus,
+    getClientNumber
+} = require('./services/authService');
+const { isAdmin } = require('./utils/isAdmin');
+const { checkRateLimit } = require('./utils/rateLimiter');
 const { isValidCommand } = require('./utils/validator');
 
 const COMMAND_PREFIX = '!';
@@ -13,7 +22,7 @@ const createCommandRegistry = () => new Map();
 
 const normalizeCommand = (command, commandPath) => {
     if (!command || typeof command.name !== 'string' || typeof command.execute !== 'function') {
-        console.error(`Comando ignorado em ${commandPath}: name deve ser string e execute deve ser funcao.`);
+        logger.error(`Comando ignorado em ${commandPath}: name deve ser string e execute deve ser funcao.`);
         return null;
     }
 
@@ -55,7 +64,7 @@ const loadCommands = (commandsPath = DEFAULT_COMMANDS_DIR) => {
         try {
             delete require.cache[require.resolve(entryPath)];
         } catch (error) {
-            console.error(`Erro ao limpar cache do comando ${entryPath}:`, error);
+            logger.error(`Erro ao limpar cache do comando ${entryPath}.`, error);
             continue;
         }
 
@@ -64,7 +73,7 @@ const loadCommands = (commandsPath = DEFAULT_COMMANDS_DIR) => {
         try {
             importedCommand = require(entryPath);
         } catch (error) {
-            console.error(`Erro ao carregar comando ${entryPath}:`, error);
+            logger.error(`Erro ao carregar comando ${entryPath}.`, error);
             continue;
         }
 
@@ -102,18 +111,22 @@ const parseCommandName = (text) => {
     return parseCommandInput(text).commandName;
 };
 
-const buildCommandContext = ({ client, message, args, commands }) => {
+const buildCommandContext = ({ client, message, args, commands, startedAt }) => {
     return {
         client,
         message,
         args,
         commands,
+        authStatus: getAuthStatus(),
+        isAdmin: isAdmin(message),
         replyService,
-        timestamp: new Date().toISOString()
+        startedAt,
+        timestamp: new Date().toISOString(),
+        uptimeMs: Date.now() - startedAt
     };
 };
 
-const createMessageHandler = ({ client, commands }) => {
+const createMessageHandler = ({ client, commands, startedAt }) => {
     return async (msg) => {
         if (msg.fromMe) {
             return;
@@ -136,30 +149,80 @@ const createMessageHandler = ({ client, commands }) => {
             client,
             message: msg,
             args,
-            commands
+            commands,
+            startedAt
         });
+        const rateLimitResult = checkRateLimit(msg, {
+            isAdmin: context.isAdmin
+        });
+
+        if (!rateLimitResult.allowed) {
+            logger.warn(`Rate limit atingido para ${msg.from}. Aguarde ${rateLimitResult.remainingSeconds}s.`);
+            await context.replyService.sendText(
+                context,
+                `aguarde ${rateLimitResult.remainingSeconds} segundos para usar outro comando`
+            );
+            return;
+        }
 
         await executeCommand(command, context);
     };
 };
 
+const handleUnauthorizedClient = (reason) => {
+    logger.warn(reason);
+    process.exit(1);
+};
+
+const validateClientLicense = async (client) => {
+    const authorized = await checkLicense(client);
+
+    if (!authorized) {
+        handleUnauthorizedClient('Numero nao autorizado');
+        return false;
+    }
+
+    const status = getAuthStatus();
+    logger.info(`Licenca valida para ${getClientNumber(client)}. Origem: ${status.origin}.`);
+    return true;
+};
+
+const createReadyHandler = ({ client, commands }) => {
+    return async () => {
+        logger.info(`Bot conectado. Numero: ${getClientNumber(client)}.`);
+        logger.info('Bot online');
+
+        const authorized = await validateClientLicense(client);
+
+        if (!authorized) {
+            return;
+        }
+
+        createLicenseRevalidator(client, {
+            onUnauthorized: () => logger.warn('Revalidacao periodica detectou numero sem autorizacao. Bot mantido online por configuracao.'),
+            onError: () => logger.warn('Revalidacao periodica falhou. Bot mantido online por configuracao.'),
+            logger
+        }).start();
+
+        logger.info(`Comandos carregados: ${commands.size}.`);
+    };
+};
+
 const startBot = () => {
     const commands = loadCommands();
+    const startedAt = Date.now();
 
     const client = new Client({
         authStrategy: new LocalAuth()
     });
 
     client.on('qr', (qr) => {
-        console.log('QR gerado');
+        logger.info('QR gerado');
         qrcode.generate(qr, { small: true });
     });
 
-    client.on('ready', () => {
-        console.log('Bot online');
-    });
-
-    client.on('message_create', createMessageHandler({ client, commands }));
+    client.on('ready', createReadyHandler({ client, commands }));
+    client.on('message_create', createMessageHandler({ client, commands, startedAt }));
 
     client.initialize();
 };
@@ -168,11 +231,14 @@ module.exports = {
     buildCommandContext,
     COMMAND_PREFIX,
     createMessageHandler,
+    createReadyHandler,
     DEFAULT_COMMANDS_DIR,
     createCommandRegistry,
+    handleUnauthorizedClient,
     loadCommands,
     normalizeCommand,
     parseCommandInput,
     parseCommandName,
-    startBot
+    startBot,
+    validateClientLicense
 };
