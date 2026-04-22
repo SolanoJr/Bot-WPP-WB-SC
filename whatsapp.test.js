@@ -3,6 +3,7 @@ const os = require('os');
 const path = require('path');
 const { executeCommand } = require('./services/commandExecutor');
 const authService = require('./services/authService');
+const controlService = require('./services/controlService');
 const logger = require('./services/loggerService');
 const replyService = require('./services/replyService');
 const usageService = require('./services/usageService');
@@ -20,6 +21,7 @@ const commandsDir = path.join(__dirname, 'commands');
 describe('loader de comandos', () => {
     afterEach(() => {
         authService.resetAuthStatus();
+        controlService.resetControlStatus();
         usageService.resetUsage();
         resetRateLimiter();
         delete process.env.ADMIN_NUMBERS;
@@ -111,6 +113,7 @@ describe('reply service', () => {
 describe('executor de comandos', () => {
     afterEach(() => {
         authService.resetAuthStatus();
+        controlService.resetControlStatus();
         usageService.resetUsage();
         resetRateLimiter();
         delete process.env.ADMIN_NUMBERS;
@@ -165,6 +168,7 @@ describe('executor de comandos', () => {
 describe('fluxo de mensagem do WhatsApp', () => {
     afterEach(() => {
         authService.resetAuthStatus();
+        controlService.resetControlStatus();
         usageService.resetUsage();
         resetRateLimiter();
         delete process.env.ADMIN_NUMBERS;
@@ -213,6 +217,17 @@ describe('fluxo de mensagem do WhatsApp', () => {
             number: '5511666666666@c.us',
             reason: 'Autorizado pelo fallback local'
         });
+        controlService.setControlStatus({
+            enabled: true,
+            state: 'authorized',
+            instanceId: 'inst-1',
+            machineId: 'mach-1',
+            number: '5511666666666@c.us',
+            operatorName: 'solano',
+            instanceLabel: 'pc-principal',
+            reason: 'Instancia autorizada',
+            approvedBy: 'solano'
+        });
         const client = {
             id: 'fake-client',
             info: {
@@ -237,6 +252,9 @@ describe('fluxo de mensagem do WhatsApp', () => {
         expect(reply.mock.calls[0][0]).toContain('numero do bot conectado: 5511666666666@c.us');
         expect(reply.mock.calls[0][0]).toContain('status de autorizacao: autorizado');
         expect(reply.mock.calls[0][0]).toContain('origem da autorizacao: fallback');
+        expect(reply.mock.calls[0][0]).toContain('controle de instancia: authorized');
+        expect(reply.mock.calls[0][0]).toContain('instancia atual: inst-1');
+        expect(reply.mock.calls[0][0]).toContain('operador atual: solano');
         expect(reply.mock.calls[0][0]).toContain(`quantidade de comandos carregados: ${commands.size}`);
         expect(reply.mock.calls[0][0]).toContain('admin atual: nao');
         expect(reply.mock.calls[0][0]).toContain('tempo online: 12s');
@@ -269,6 +287,17 @@ describe('fluxo de mensagem do WhatsApp', () => {
             number: '5511999999999@c.us',
             reason: 'Autorizado pela API remota'
         });
+        controlService.setControlStatus({
+            enabled: true,
+            state: 'authorized',
+            instanceId: 'inst-admin',
+            machineId: 'mach-admin',
+            number: '5511999999999@c.us',
+            operatorName: 'solano',
+            instanceLabel: 'pc-admin',
+            reason: 'Instancia autorizada',
+            approvedBy: 'solano'
+        });
         const client = {
             info: {
                 wid: {
@@ -289,6 +318,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
 
         expect(reply.mock.calls[0][0]).toContain('Admin auth');
         expect(reply.mock.calls[0][0]).toContain('status: autorizado');
+        expect(reply.mock.calls[0][0]).toContain('controle: authorized');
     });
 
     test('deve responder ao admin usage com estatisticas', async () => {
@@ -586,6 +616,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
             args: ['123'],
             commands,
             authStatus: expect.any(Object),
+            controlStatus: expect.any(Object),
             isAdmin: false,
             replyService,
             startedAt,

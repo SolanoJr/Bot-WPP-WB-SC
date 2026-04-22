@@ -12,6 +12,13 @@ const {
     getAuthStatus,
     getClientNumber
 } = require('./services/authService');
+const {
+    createControlHeartbeat,
+    getControlStatus,
+    isControlEnabled,
+    isInstanceAuthorized,
+    registerInstance
+} = require('./services/controlService');
 const { isAdmin } = require('./utils/isAdmin');
 const { checkRateLimit } = require('./utils/rateLimiter');
 const { isValidCommand } = require('./utils/validator');
@@ -123,6 +130,7 @@ const buildCommandContext = ({ client, message, args, commands, startedAt }) => 
         args,
         commands,
         authStatus: getAuthStatus(),
+        controlStatus: getControlStatus(),
         isAdmin: isAdmin(message),
         replyService,
         startedAt,
@@ -197,12 +205,41 @@ const validateClientLicense = async (client) => {
     return true;
 };
 
+const validateControlAccess = async (client) => {
+    if (!isControlEnabled()) {
+        logger.warn('Controle remoto desabilitado. O bot vai operar apenas com a validacao de licenca atual.');
+        return true;
+    }
+
+    const status = await registerInstance(client);
+
+    if (!isInstanceAuthorized(status)) {
+        handleUnauthorizedClient(`Instancia sem autorizacao para iniciar. Estado: ${status.state}. Motivo: ${status.reason}.`);
+        return false;
+    }
+
+    logger.info(
+        `Instancia autorizada pelo controle remoto. Estado: ${status.state}. Operador: ${status.operatorName}. Instancia: ${status.instanceId}.`
+    );
+    return true;
+};
+
+const validateClientAccess = async (client) => {
+    const licenseAuthorized = await validateClientLicense(client);
+
+    if (!licenseAuthorized) {
+        return false;
+    }
+
+    return validateControlAccess(client);
+};
+
 const createReadyHandler = ({ client, commands }) => {
     return async () => {
         logger.info(`Bot conectado. Numero: ${getClientNumber(client)}.`);
         logger.info('Bot online');
 
-        const authorized = await validateClientLicense(client);
+        const authorized = await validateClientAccess(client);
 
         if (!authorized) {
             return;
@@ -212,6 +249,17 @@ const createReadyHandler = ({ client, commands }) => {
             onUnauthorized: () => logger.warn('Revalidacao periodica detectou numero sem autorizacao. Bot mantido online por configuracao.'),
             onError: () => logger.warn('Revalidacao periodica falhou. Bot mantido online por configuracao.'),
             logger
+        }).start();
+
+        createControlHeartbeat(client, {
+            onUnauthorized: (status) => {
+                handleUnauthorizedClient(
+                    `Controle remoto revogou a instancia ${status.instanceId}. Estado: ${status.state}. Motivo: ${status.reason}.`
+                );
+            },
+            onAuthorized: (status) => {
+                logger.info(`Heartbeat autorizado para a instancia ${status.instanceId}.`);
+            }
         }).start();
 
         logger.info(`Comandos carregados: ${commands.size}.`);
@@ -250,5 +298,7 @@ module.exports = {
     parseCommandInput,
     parseCommandName,
     startBot,
-    validateClientLicense
+    validateClientAccess,
+    validateClientLicense,
+    validateControlAccess
 };

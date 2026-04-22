@@ -13,11 +13,18 @@ module.exports = {
         const authorizedLabel = context.authStatus?.authorized ? 'autorizado' : 'nao autorizado';
         const authorizationOrigin = context.authStatus?.origin || 'desconhecido';
         const uptimeSeconds = Math.floor((context.uptimeMs || 0) / 1000);
+        const controlState = context.controlStatus?.state || 'desconhecido';
+        const controlLabel = context.controlStatus?.enabled === false ? 'desabilitado' : controlState;
         const response = [
             'Bot online',
             `numero do bot conectado: ${number}`,
             `status de autorizacao: ${authorizedLabel}`,
             `origem da autorizacao: ${authorizationOrigin}`,
+            `controle de instancia: ${controlLabel}`,
+            `instancia atual: ${context.controlStatus?.instanceId || 'nao registrada'}`,
+            `operador atual: ${context.controlStatus?.operatorName || 'desconhecido'}`,
+            `apelido da instancia: ${context.controlStatus?.instanceLabel || 'desconhecido'}`,
+            `motivo do controle: ${context.controlStatus?.reason || 'sem motivo'}`,
             `quantidade de comandos carregados: ${context.commands.size}`,
             `admin atual: ${context.isAdmin ? 'sim' : 'nao'}`,
             `tempo online: ${uptimeSeconds}s`,

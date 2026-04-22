@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "mock:license": "node mock-license-api.js",
+    "mock:control": "node mock-license-api.js",
     "test": "jest --runInBand --testPathIgnorePatterns=commands"
   },
   "keywords": [],

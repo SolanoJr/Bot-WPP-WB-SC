@@ -28,6 +28,9 @@ module.exports = {
                     `numero: ${number}`,
                     `autorizacao: ${context.authStatus?.authorized ? 'autorizado' : 'nao autorizado'}`,
                     `origem: ${context.authStatus?.origin || 'desconhecido'}`,
+                    `controle: ${context.controlStatus?.enabled === false ? 'desabilitado' : context.controlStatus?.state || 'desconhecido'}`,
+                    `instancia: ${context.controlStatus?.instanceId || 'nao registrada'}`,
+                    `operador: ${context.controlStatus?.operatorName || 'desconhecido'}`,
                     `comandos carregados: ${context.commands.size}`,
                     `tempo online: ${uptimeSeconds}s`
                 ].join('\n')
@@ -43,7 +46,10 @@ module.exports = {
                     `status: ${context.authStatus?.authorized ? 'autorizado' : 'nao autorizado'}`,
                     `origem: ${context.authStatus?.origin || 'desconhecido'}`,
                     `motivo: ${context.authStatus?.reason || 'desconhecido'}`,
-                    `ultimo check: ${context.authStatus?.checkedAt || 'nunca'}`
+                    `ultimo check: ${context.authStatus?.checkedAt || 'nunca'}`,
+                    `controle: ${context.controlStatus?.enabled === false ? 'desabilitado' : context.controlStatus?.state || 'desconhecido'}`,
+                    `instancia: ${context.controlStatus?.instanceId || 'nao registrada'}`,
+                    `motivo do controle: ${context.controlStatus?.reason || 'sem motivo'}`
                 ].join('\n')
             );
             return;
