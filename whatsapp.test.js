@@ -5,6 +5,7 @@ const { executeCommand } = require('./services/commandExecutor');
 const authService = require('./services/authService');
 const logger = require('./services/loggerService');
 const replyService = require('./services/replyService');
+const usageService = require('./services/usageService');
 const { resetRateLimiter } = require('./utils/rateLimiter');
 const {
     buildCommandContext,
@@ -19,6 +20,7 @@ const commandsDir = path.join(__dirname, 'commands');
 describe('loader de comandos', () => {
     afterEach(() => {
         authService.resetAuthStatus();
+        usageService.resetUsage();
         resetRateLimiter();
         delete process.env.ADMIN_NUMBERS;
         jest.restoreAllMocks();
@@ -109,6 +111,7 @@ describe('reply service', () => {
 describe('executor de comandos', () => {
     afterEach(() => {
         authService.resetAuthStatus();
+        usageService.resetUsage();
         resetRateLimiter();
         delete process.env.ADMIN_NUMBERS;
         jest.restoreAllMocks();
@@ -162,6 +165,7 @@ describe('executor de comandos', () => {
 describe('fluxo de mensagem do WhatsApp', () => {
     afterEach(() => {
         authService.resetAuthStatus();
+        usageService.resetUsage();
         resetRateLimiter();
         delete process.env.ADMIN_NUMBERS;
         jest.restoreAllMocks();
@@ -198,6 +202,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
             })
         );
         expect(reply).toHaveBeenCalledWith('comando test funcionando');
+        expect(usageService.getCommandUsage()).toEqual({ test: 1 });
     });
 
     test('deve executar o comando status', async () => {
@@ -286,6 +291,32 @@ describe('fluxo de mensagem do WhatsApp', () => {
         expect(reply.mock.calls[0][0]).toContain('status: autorizado');
     });
 
+    test('deve responder ao admin usage com estatisticas', async () => {
+        process.env.ADMIN_NUMBERS = '5511999999999@c.us';
+        const commands = loadCommands(commandsDir);
+        usageService.registerUsage('ping', '5511777777777@c.us');
+        usageService.registerUsage('ping', '5511777777777@c.us');
+        usageService.registerUsage('help', '5511888888888@c.us');
+        const reply = jest.fn().mockResolvedValue(undefined);
+        const msg = {
+            body: '!admin usage',
+            fromMe: false,
+            from: '5511999999999@c.us',
+            reply
+        };
+        const handler = createMessageHandler({
+            client: { id: 'fake-client' },
+            commands,
+            startedAt: Date.now() - 5000
+        });
+
+        await handler(msg);
+
+        expect(reply.mock.calls[0][0]).toContain('Admin usage');
+        expect(reply.mock.calls[0][0]).toContain('- ping: 2');
+        expect(reply.mock.calls[0][0]).toContain('- 5511777777777@c.us: 2');
+    });
+
     test('deve negar comando admin para numero nao autorizado', async () => {
         process.env.ADMIN_NUMBERS = '5511999999999@c.us';
         const commands = loadCommands(commandsDir);
@@ -353,6 +384,69 @@ describe('fluxo de mensagem do WhatsApp', () => {
 
         expect(reply.mock.calls[0][0]).toBe('Bem-vindo! Esse é seu primeiro comando.');
         expect(reply.mock.calls[1][0]).toBe('pong');
+    });
+
+    test('mensagem spam nao executa comando', async () => {
+        const commands = loadCommands(commandsDir);
+        const reply = jest.fn().mockResolvedValue(undefined);
+        const deleteMessage = jest.fn().mockResolvedValue(undefined);
+        const command = commands.get('ping');
+        const executeSpy = jest.spyOn(command, 'execute');
+        const handler = createMessageHandler({
+            client: {
+                blockContact: jest.fn().mockResolvedValue(undefined),
+                info: {
+                    wid: {
+                        _serialized: '5511000000000@c.us'
+                    }
+                }
+            },
+            commands,
+            startedAt: Date.now() - 5000
+        });
+        const msg = {
+            body: '!ping https://suspeito.com bet',
+            fromMe: false,
+            from: 'grupo@g.us',
+            author: '5511222222222@c.us',
+            reply,
+            delete: deleteMessage,
+            getChat: jest.fn().mockResolvedValue({
+                isGroup: true,
+                participants: [
+                    { id: { _serialized: '5511222222222@c.us' }, isAdmin: false },
+                    { id: { _serialized: '5511000000000@c.us' }, isAdmin: true }
+                ],
+                removeParticipants: jest.fn().mockResolvedValue(undefined)
+            }),
+            _data: { isNewMsg: true }
+        };
+
+        await handler(msg);
+
+        expect(executeSpy).not.toHaveBeenCalled();
+        expect(deleteMessage).toHaveBeenCalledWith(true);
+    });
+
+    test('mensagem normal executa comando', async () => {
+        const commands = loadCommands(commandsDir);
+        const reply = jest.fn().mockResolvedValue(undefined);
+        const handler = createMessageHandler({
+            client: { blockContact: jest.fn(), info: { wid: { _serialized: '5511000000000@c.us' } } },
+            commands,
+            startedAt: Date.now() - 5000
+        });
+        const msg = {
+            body: '!ping',
+            fromMe: false,
+            from: '5511222222222@c.us',
+            reply,
+            _data: { isNewMsg: false }
+        };
+
+        await handler(msg);
+
+        expect(reply).toHaveBeenCalledWith('pong');
     });
 
     test('deve executar o comando info usando context e replyService', async () => {

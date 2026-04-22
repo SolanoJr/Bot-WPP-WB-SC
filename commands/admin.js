@@ -1,3 +1,5 @@
+const usageSubcommand = require('./admin/usage');
+
 module.exports = {
     name: 'admin',
     description: 'Executa comandos administrativos.',
@@ -56,6 +58,11 @@ module.exports = {
                 context,
                 ['Admin commands', ...commandList].join('\n')
             );
+            return;
+        }
+
+        if (subcommand === 'usage') {
+            await usageSubcommand.execute(context);
             return;
         }
 

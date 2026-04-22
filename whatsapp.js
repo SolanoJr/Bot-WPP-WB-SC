@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { executeCommand } = require('./services/commandExecutor');
 const logger = require('./services/loggerService');
+const { handleModeration } = require('./services/moderationService');
 const replyService = require('./services/replyService');
 const {
     checkLicense,
@@ -48,6 +49,10 @@ const loadCommands = (commandsPath = DEFAULT_COMMANDS_DIR) => {
         const entryPath = path.join(commandsPath, entry.name);
 
         if (entry.isDirectory()) {
+            if (entry.name.toLowerCase() === 'admin') {
+                continue;
+            }
+
             const nestedCommands = loadCommands(entryPath);
 
             for (const [name, command] of nestedCommands) {
@@ -133,6 +138,11 @@ const createMessageHandler = ({ client, commands, startedAt }) => {
         }
 
         const text = String(msg.body || '').trim();
+        const moderationResult = await handleModeration(client, msg);
+
+        if (moderationResult.actionTaken) {
+            return;
+        }
 
         if (!isValidCommand(text)) {
             return;
