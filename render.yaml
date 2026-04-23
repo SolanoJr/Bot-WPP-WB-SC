@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: bot-wpp-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node backend/app.js
+    envVars:
+      - key: PORT
+        value: 4010
+      - key: DB_PATH
+        value: ./backend/database.sqlite
+      - key: ADMIN_API_KEY
+        sync: false

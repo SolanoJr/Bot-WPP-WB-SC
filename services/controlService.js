@@ -113,9 +113,14 @@ const normalizeControlResponse = (response = {}, fallback = {}) => {
         state: response.status || fallback.state || 'pending',
         instanceId: response.instanceId || fallback.instanceId || '',
         machineId: response.machineId || fallback.machineId || '',
-        number: response.number || fallback.number || '',
+        number: response.number || response.whatsappNumber || fallback.number || fallback.whatsappNumber || '',
         operatorName: response.operatorName || fallback.operatorName || '',
-        instanceLabel: response.instanceLabel || fallback.instanceLabel || '',
+        instanceLabel:
+            response.instanceLabel ||
+            response.instanceName ||
+            fallback.instanceLabel ||
+            fallback.instanceName ||
+            '',
         reason: response.message || response.reason || fallback.reason || 'Sem motivo informado',
         approvedBy: response.approvedBy || fallback.approvedBy || '',
         lastHeartbeatAt: response.lastHeartbeatAt || fallback.lastHeartbeatAt || null
@@ -148,15 +153,26 @@ const isInstanceAuthorized = (status = getControlStatus()) => {
     return status.state === 'authorized';
 };
 
-const postControlEvent = async (route, payload, options = {}) => {
+const buildControlUrl = (route, options = {}) => {
     const config = getControlConfig();
     const controlApiUrl = options.controlApiUrl || config.controlApiUrl;
 
     if (!controlApiUrl) {
+        return '';
+    }
+
+    return `${String(controlApiUrl).replace(/\/+$/, '')}${route}`;
+};
+
+const postControlEvent = async (route, payload, options = {}) => {
+    const controlUrl = buildControlUrl(route, options);
+
+    if (!controlUrl) {
         return null;
     }
 
-    const response = await axios.post(`${controlApiUrl}${route}`, payload, {
+    const config = getControlConfig();
+    const response = await axios.post(controlUrl, payload, {
         headers: buildControlHeaders(config),
         timeout: options.timeout || 5000
     });
@@ -180,7 +196,7 @@ const registerInstance = async (client, options = {}) => {
     logger.info(`Registrando instancia ${payload.instanceId} para ${payload.number}.`);
 
     try {
-        const data = await postControlEvent('/register', payload, options);
+        const data = await postControlEvent('/instances/register', payload, options);
         const status = setControlStatus(normalizeControlResponse(data, payload));
 
         logger.info(
@@ -214,7 +230,7 @@ const sendHeartbeat = async (client, options = {}) => {
     const payload = buildInstancePayload(client, options);
 
     try {
-        const data = await postControlEvent('/heartbeat', payload, options);
+        const data = await postControlEvent('/instances/heartbeat', payload, options);
         const status = setControlStatus(normalizeControlResponse(data, payload));
 
         if (status.state !== 'authorized') {
@@ -286,6 +302,7 @@ module.exports = {
     buildInstancePayload,
     createControlHeartbeat,
     ensureInstanceIdentity,
+    buildControlUrl,
     getControlConfig,
     getControlStatus,
     isControlEnabled,

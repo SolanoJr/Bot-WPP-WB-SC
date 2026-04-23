@@ -7,3 +7,7 @@ node_modules/
 .env.local
 .env.*.local
 npm-debug.log*
+backend/database.sqlite
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

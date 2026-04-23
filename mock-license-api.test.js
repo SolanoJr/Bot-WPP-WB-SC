@@ -65,13 +65,13 @@ describe('mock license api', () => {
         await mockServer.start();
 
         const registerResponse = await axios.post(
-            'http://127.0.0.1:4023/control/register',
+            'http://127.0.0.1:4023/instances/register',
             {
                 instanceId: 'inst-1',
                 machineId: 'mach-1',
-                number: '5511999999999@c.us',
+                whatsappNumber: '5511999999999@c.us',
                 operatorName: 'caio',
-                instanceLabel: 'notebook-caio'
+                instanceName: 'notebook-caio'
             },
             {
                 headers: { 'x-control-key': 'segredo' },
@@ -82,7 +82,7 @@ describe('mock license api', () => {
         expect(registerResponse.data.status).toBe('pending');
 
         const approveResponse = await axios.post(
-            'http://127.0.0.1:4023/control/instances/inst-1/approve',
+            'http://127.0.0.1:4023/instances/inst-1/approve',
             {
                 approvedBy: 'solano',
                 reason: 'Liberado para desenvolvimento'
@@ -95,7 +95,7 @@ describe('mock license api', () => {
 
         expect(approveResponse.data.status).toBe('authorized');
 
-        const listResponse = await axios.get('http://127.0.0.1:4023/control/instances', {
+        const listResponse = await axios.get('http://127.0.0.1:4023/instances', {
             headers: { 'x-admin-key': 'admin-local' },
             timeout: 5000
         });
@@ -106,6 +106,53 @@ describe('mock license api', () => {
                 operatorName: 'caio',
                 status: 'authorized',
                 approvedBy: 'solano'
+            })
+        ]);
+    });
+
+    test('deve registrar uso e feedback no mock operacional', async () => {
+        storePath = path.join(os.tmpdir(), `mock-control-${Date.now()}-ops.json`);
+        mockServer = createMockLicenseServer({
+            port: 4024,
+            storePath,
+            adminKey: 'admin-local'
+        });
+
+        await mockServer.start();
+
+        await axios.post('http://127.0.0.1:4024/usage', {
+            instanceId: 'inst-1',
+            whatsappNumber: '5511999999999@c.us',
+            commandName: 'ping',
+            args: ['123'],
+            groupId: 'grupo@g.us',
+            userId: '5511000000000@c.us'
+        });
+
+        await axios.post('http://127.0.0.1:4024/feedback', {
+            instanceId: 'inst-1',
+            whatsappNumber: '5511999999999@c.us',
+            userId: '5511000000000@c.us',
+            groupId: 'grupo@g.us',
+            message: 'teste'
+        });
+
+        const summaryResponse = await axios.get('http://127.0.0.1:4024/usage/summary', {
+            headers: { 'x-admin-key': 'admin-local' },
+            timeout: 5000
+        });
+
+        expect(summaryResponse.data.topCommands).toEqual([
+            expect.objectContaining({
+                commandName: 'ping',
+                count: 1
+            })
+        ]);
+
+        const store = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+        expect(store.feedback).toEqual([
+            expect.objectContaining({
+                message: 'teste'
             })
         ]);
     });

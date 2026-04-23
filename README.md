@@ -1,50 +1,32 @@
-# Bot-WPP-WB-SC
+# Bot-WPP
 
-Bot de WhatsApp baseado em `whatsapp-web.js` com comandos modulares, controle remoto de instancia, autorizacao por numero, telemetria, moderacao automatica e testes automatizados.
+Sistema operacional para bot de WhatsApp com:
 
-## 1. Descricao do projeto
+- bot em `whatsapp-web.js`
+- backend real em Node.js + Express
+- persistencia em SQLite
+- controle de instancias
+- telemetria de uso
+- coleta de feedback
+- pronto para deploy no Render
 
-O projeto sobe um cliente do WhatsApp Web, autentica via QR Code e processa mensagens com prefixo `!`.
+## Visao geral
 
-Exemplos:
+O repositorio pode continuar publico para demonstracao. O uso real do bot continua controlado por voce em duas camadas:
 
-- `!ping`
-- `!status`
-- `!help`
-- `!admin auth`
-- `!admin usage`
+- licenca por numero do WhatsApp
+- autorizacao de instancia no backend
 
-## 1.1 O que este projeto protege de verdade
+Traduzindo sem romantizar:
 
-Este repositorio pode continuar publico. Isso deixa visivel no que voce esta trabalhando, mas nao deve ser confundido com controle de uso.
+- qualquer pessoa pode clonar o codigo
+- nem toda pessoa consegue operar o bot
+- a instancia so funciona se o backend responder `authorized`
+- voce consegue ver quem esta usando, quais comandos foram usados e revogar a instancia quando quiser
 
-O controle real acontece em 4 camadas:
+## Stack
 
-- licenca por numero via `LICENSE_API_URL`
-- fallback local via `LOCAL_AUTHORIZED_NUMBERS`
-- controle remoto de instancia via `CONTROL_API_URL`
-- comandos administrativos via `ADMIN_NUMBERS`
-
-Isso significa:
-
-- qualquer pessoa pode ver o codigo se o repositorio for publico
-- nem toda pessoa consegue subir uma instancia funcional
-- voce pode aprovar ou revogar instancias ligadas ao seu backend
-- voce pode ver quais instancias registradas estao tentando operar
-
-Limite honesto: se alguem clonar um repositorio publico e remover sua checagem de controle localmente, nao existe milagre do lado do cliente. O que voce controla de verdade e toda instancia que depende do seu backend para operar.
-
-## 1.2 Tipos de acesso
-
-Estas permissoes sao independentes:
-
-- acesso para ler o codigo: depende de o repositorio ser publico ou privado
-- acesso para escrever no repositorio principal: depende de permissao no GitHub
-- acesso para usar o bot em execucao: depende da licenca, do controle remoto e da lista de admins
-
-Dar acesso ao Git para o Caio nao significa dar acesso operacional ao bot.
-
-## 2. Tecnologias usadas
+### Bot
 
 - Node.js
 - `whatsapp-web.js`
@@ -53,88 +35,132 @@ Dar acesso ao Git para o Caio nao significa dar acesso operacional ao bot.
 - `dotenv`
 - Jest
 
-## 3. Requisitos
+### Backend
 
-- Node.js 18 ou superior
-- npm 9 ou superior
-- internet
-- um numero de WhatsApp para operar a instancia que realmente vai responder
+- Node.js
+- Express
+- SQLite com `better-sqlite3`
+- `dotenv`
 
-## 4. Instalacao passo a passo
+## Requisitos
 
-### Clonar o repositorio
+- Node.js 18+
+- npm 9+
+- acesso a internet
+- um numero de WhatsApp autenticado para operar o bot oficial
 
-```bash
-git clone <URL_DO_REPOSITORIO>
-cd bot-wpp
+## Estrutura
+
+```text
+bot-wpp/
+├─ backend/
+│  ├─ app.js
+│  ├─ database/
+│  │  ├─ connection.js
+│  │  └─ init.js
+│  ├─ repositories/
+│  │  ├─ feedbackRepository.js
+│  │  ├─ instanceRepository.js
+│  │  └─ usageRepository.js
+│  ├─ routes/
+│  │  ├─ feedbackRoutes.js
+│  │  ├─ instanceRoutes.js
+│  │  └─ usageRoutes.js
+│  └─ services/
+│     ├─ feedbackService.js
+│     ├─ instanceService.js
+│     └─ usageService.js
+├─ commands/
+├─ services/
+├─ utils/
+├─ whatsapp.js
+├─ index.js
+├─ mock-license-api.js
+├─ render.yaml
+├─ .env.example
+└─ README.md
 ```
 
-### Instalar dependencias
+## Backend local
+
+### 1. Instalar dependencias
 
 ```bash
 npm install
 ```
 
-### Configurar ambiente
+### 2. Criar `.env`
 
-1. Crie um arquivo `.env` na raiz
-2. Use `.env.example` como base
+Use o arquivo `.env.example` como base.
 
-Exemplo minimo:
+Exemplo minimo para backend + bot local:
 
 ```env
-LICENSE_API_URL=http://127.0.0.1:4010/licenca
-CONTROL_API_URL=http://127.0.0.1:4010/control
+PORT=4010
+DB_PATH=./backend/database.sqlite
+ADMIN_API_KEY=trocar_essa_chave
+CONTROL_API_URL=http://127.0.0.1:4010
 CONTROL_REGISTRATION_KEY=troque-essa-chave
 CONTROL_HEARTBEAT_INTERVAL_MS=60000
 INSTANCE_OPERATOR_NAME=solano
 INSTANCE_LABEL=pc-principal
+LICENSE_API_URL=http://127.0.0.1:4010/licenca
 LOCAL_AUTHORIZED_NUMBERS=5511999999999@c.us
 ADMIN_NUMBERS=5511999999999@c.us
 LICENSE_REVALIDATION_INTERVAL_MS=300000
 ```
 
-### Iniciar o bot
+### 3. Subir o backend
 
 ```bash
 npm start
 ```
 
-### Autenticar no WhatsApp
+Isso sobe o backend em `http://127.0.0.1:4010` por padrao.
 
-1. Aguarde `QR gerado`
-2. Abra o WhatsApp no celular
-3. Acesse `Dispositivos conectados`
-4. Escaneie o QR Code
-5. Aguarde `Bot online`
+### 4. Subir o bot
 
-## 5. Explicacao do fluxo
+Em outro terminal:
+
+```bash
+npm run bot:start
+```
+
+## Fluxo do sistema
 
 ### `index.js`
 
-Ponto de entrada da aplicacao.
+Ponto de entrada do bot.
 
 ### `whatsapp.js`
 
-Camada principal de orquestracao. Responsavel por:
+Orquestra tudo do lado do bot:
 
-- moderacao antes de qualquer comando
-- carregamento automatico de comandos
-- parser de comando e argumentos
-- montagem do `context`
-- execucao centralizada de comandos
-- validacao de licenca do numero conectado
-- validacao de instancia no controle remoto
-- heartbeat de controle para permitir revogacao remota
+- carrega comandos automaticamente
+- valida licenca do numero
+- registra a instancia no backend
+- inicia heartbeat periodico
+- aplica moderacao antes dos comandos
+- executa comandos com `commandExecutor`
+- envia telemetria de uso ao backend quando o comando executa com sucesso
+
+### `backend/app.js`
+
+Ponto de entrada do backend:
+
+- inicializa Express
+- cria schema SQLite
+- registra rotas
+- responde requests de instancias, uso e feedback
 
 ### `commands/`
 
-Cada comando exporta:
+Cada comando segue o contrato:
 
 ```js
 module.exports = {
-  name: 'nome-do-comando',
-  description: 'Descricao curta do comando',
+  name: 'nome',
+  description: 'descricao',
   async execute(msg, args, context) {
     // logica
   }
@@ -143,342 +169,330 @@ module.exports = {
 
 ### `services/`
 
-- `replyService.js`: resposta padronizada
-- `commandExecutor.js`: execucao centralizada
-- `loggerService.js`: logs estruturados
+No bot:
+
 - `authService.js`: licenca por numero
-- `controlService.js`: registro, aprovacao e heartbeat de instancia
-- `usageService.js`: telemetria em memoria
-- `moderationService.js`: anti-spam
+- `controlService.js`: registro e heartbeat da instancia
+- `backendTelemetryService.js`: envio de uso e feedback para o backend
+- `commandExecutor.js`: execucao centralizada
+- `replyService.js`: respostas padronizadas
+- `loggerService.js`: logs estruturados
 
-### `utils/`
+No backend:
 
-Funcoes auxiliares pequenas, como validacao, admin e rate limit.
+- `instanceService.js`: registro, heartbeat, aprovacao e revogacao
+- `usageService.js`: persistencia e resumo de uso
+- `feedbackService.js`: persistencia de feedback
 
-## 6. Como adicionar um novo comando
+## Banco de dados
 
-1. Crie um arquivo `.js` em `commands/`
-2. Exporte `name`, `description` e `execute`
-3. Use `context.replyService.sendText(context, 'resposta')`
+O backend cria 3 tabelas:
 
-Exemplo:
+### `instances`
 
-```js
-module.exports = {
-  name: 'exemplo',
-  description: 'Comando de exemplo',
+- `id`
+- `machineId`
+- `instanceName`
+- `operatorName`
+- `whatsappNumber`
+- `status`
+- `createdAt`
+- `updatedAt`
+- `lastHeartbeatAt`
 
-  async execute(msg, args, context) {
-    void msg;
-    await context.replyService.sendText(context, `Recebi ${args.length} argumento(s).`);
-  }
-};
+### `command_usage`
+
+- `id`
+- `instanceId`
+- `whatsappNumber`
+- `commandName`
+- `args`
+- `groupId`
+- `userId`
+- `timestamp`
+
+### `feedback`
+
+- `id`
+- `instanceId`
+- `whatsappNumber`
+- `userId`
+- `groupId`
+- `message`
+- `createdAt`
+
+## Endpoints do backend
+
+### Instancias
+
+- `POST /instances/register`
+- `POST /instances/heartbeat`
+- `GET /instances`
+- `POST /instances/:id/approve`
+- `POST /instances/:id/revoke`
+
+### Uso e feedback
+
+- `POST /usage`
+- `GET /usage/summary`
+- `POST /feedback`
+
+## Seguranca minima
+
+Os endpoints abaixo exigem header `x-admin-key` igual ao valor de `ADMIN_API_KEY`:
+
+- `GET /instances`
+- `POST /instances/:id/approve`
+- `POST /instances/:id/revoke`
+- `GET /usage/summary`
+
+O registro de instancia e o envio de uso/feedback nao usam essa chave de admin.
+
+## Como conectar o bot ao backend
+
+No `.env` do bot:
+
+```env
+CONTROL_API_URL=http://127.0.0.1:4010
+LICENSE_API_URL=http://127.0.0.1:4010/licenca
 ```
 
-## 6.1 Configuracao de autorizacao e controle
+Regra operacional:
 
-Variaveis principais:
+- se a licenca falhar, o bot nao sobe
+- se a instancia vier `pending` ou `revoked`, o bot nao opera
+- se o heartbeat devolver `revoked`, o processo encerra
 
-- `LICENSE_API_URL`: API de licenca do numero do WhatsApp
-- `LOCAL_AUTHORIZED_NUMBERS`: fallback local se a API falhar
-- `LICENSE_REVALIDATION_INTERVAL_MS`: revalidacao da licenca
-- `CONTROL_API_URL`: backend de controle de instancia
-- `CONTROL_REGISTRATION_KEY`: chave de registro da instancia
-- `CONTROL_HEARTBEAT_INTERVAL_MS`: intervalo do heartbeat
-- `INSTANCE_OPERATOR_NAME`: nome de quem esta operando aquela instancia
-- `INSTANCE_LABEL`: apelido legivel da maquina/instancia
-- `ADMIN_NUMBERS`: quem pode usar comandos administrativos
+## Como aprovar instancias
+
+### 1. Registrar uma instancia
+
+Quando o bot sobe, ele tenta registrar automaticamente em:
+
+- `POST /instances/register`
+
+### 2. Ver instancias pendentes
+
+Exemplo em PowerShell:
+
+```powershell
+Invoke-RestMethod -Method Get `
+  -Uri http://127.0.0.1:4010/instances `
+  -Headers @{ 'x-admin-key' = 'trocar_essa_chave' }
+```
+
+### 3. Aprovar
+
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:4010/instances/SEU_INSTANCE_ID/approve `
+  -Headers @{ 'x-admin-key' = 'trocar_essa_chave' } `
+  -ContentType 'application/json' `
+  -Body '{"approvedBy":"solano","reason":"Liberado para uso"}'
+```
+
+### 4. Revogar
+
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri http://127.0.0.1:4010/instances/SEU_INSTANCE_ID/revoke `
+  -Headers @{ 'x-admin-key' = 'trocar_essa_chave' } `
+  -ContentType 'application/json' `
+  -Body '{"reason":"Acesso encerrado"}'
+```
+
+## Telemetria de uso
+
+Depois que um comando executa com sucesso, o bot envia para `POST /usage`:
+
+- instancia
+- numero do bot
+- comando
+- argumentos
+- grupo
+- usuario
+- timestamp
+
+Para consultar resumo:
+
+```powershell
+Invoke-RestMethod -Method Get `
+  -Uri http://127.0.0.1:4010/usage/summary `
+  -Headers @{ 'x-admin-key' = 'trocar_essa_chave' }
+```
+
+O resumo inclui:
+
+- top comandos
+- top usuarios
+- uso por grupo
+
+## Feedback
+
+Comando do bot:
+
+```text
+!feedback sua mensagem aqui
+```
 
 Comportamento:
 
-- se a licenca reprovar, o bot nao sobe
-- se o controle remoto estiver configurado e a instancia vier `pending`, `revoked` ou `error`, o bot nao sobe
-- depois de autorizado, o bot manda heartbeat periodico
-- se o backend devolver `revoked`, o processo e encerrado
-- se o heartbeat falhar por erro de rede, o bot loga o problema
+- salva no backend via `POST /feedback`
+- responde `feedback enviado com sucesso`
 
-## 6.2 Quem precisa escanear QR Code
+## Deploy no Render
 
-### Cenario 1: voce operando o bot oficial
+O projeto ja esta preparado com `render.yaml`.
 
-Esse e o fluxo principal.
+### Configuracao esperada
 
-- o numero do bot fica autenticado na sua maquina
-- voce roda a instancia oficial aqui
-- os testes reais nos grupos acontecem aqui
+- Build command: `npm install`
+- Start command: `node backend/app.js`
 
-### Cenario 2: Caio apenas desenvolvendo
+### Variaveis de ambiente no Render
 
-Se o Caio so vai:
+- `PORT`
+- `DB_PATH`
+- `ADMIN_API_KEY`
 
-- implementar codigo
-- rodar testes
-- abrir PR ou fazer push onde voce permitir
+Se o bot for rodar apontando para esse backend remoto, no `.env` da maquina que opera o bot:
 
-entao ele nao precisa escanear QR Code.
+```env
+CONTROL_API_URL=https://SEU_BACKEND_RENDER
+LICENSE_API_URL=https://SEU_BACKEND_RENDER/licenca
+```
 
-### Cenario 3: Caio rodando uma instancia propria
+## Mock local
 
-So nesse caso ele precisa:
-
-- um `.env` dele
-- um numero dele ou uma conta dele para autenticar
-- aprovacao sua no backend de controle
-- permissao na licenca e, se necessario, em `ADMIN_NUMBERS`
-
-## 6.3 Mock local de licenca e controle
-
-Para demonstracao local:
+Se quiser demonstrar o fluxo sem backend real:
 
 ```bash
 npm run mock:control
 ```
 
-Esse mock sobe por padrao em `http://127.0.0.1:4010` e atende:
+Esse mock responde:
 
 - `GET /licenca`
-- `POST /control/register`
-- `POST /control/heartbeat`
-- `GET /control/instances`
-- `POST /control/instances/:id/approve`
-- `POST /control/instances/:id/revoke`
+- `POST /instances/register`
+- `POST /instances/heartbeat`
+- `GET /instances`
+- `POST /instances/:id/approve`
+- `POST /instances/:id/revoke`
+- `POST /usage`
+- `GET /usage/summary`
+- `POST /feedback`
 
-Variaveis uteis do mock:
+## Como outro dev comeca
 
-- `MOCK_CONTROL_ADMIN_KEY`
-- `MOCK_CONTROL_REGISTRATION_KEY`
-- `MOCK_CONTROL_STORE_PATH`
-- `MOCK_CONTROL_DEFAULT_STATE`
+### Caso 1: Caio so vai codar
 
-## 6.4 Como aprovar uma instancia
+Fluxo:
 
-Fluxo simples:
+1. clonar o repositorio
+2. rodar `npm install`
+3. criar `.env` a partir de `.env.example`
+4. rodar `npm test`
+5. implementar a mudanca
+6. subir para o Git
 
-1. A pessoa configura `.env` com `CONTROL_API_URL` e `CONTROL_REGISTRATION_KEY`
-2. Ela roda o bot
-3. A instancia registra no backend como `pending`
-4. Voce lista as instancias pendentes
-5. Voce aprova ou revoga
-6. Depois da aprovacao, a instancia consegue subir normalmente
+Nesse caso ele nao precisa escanear QR e nao precisa operar o bot oficial.
 
-Exemplo para listar instancias no mock local:
+### Caso 2: Caio vai rodar instancia dele
 
-```powershell
-Invoke-RestMethod -Method Get `
-  -Uri http://127.0.0.1:4010/control/instances `
-  -Headers @{ 'x-admin-key' = 'admin-local' }
-```
+Alem do fluxo acima, voce precisa:
 
-Exemplo para aprovar:
+1. autorizar o numero dele na licenca
+2. aprovar a instancia dele no backend
+3. se quiser comando admin, colocar o numero dele em `ADMIN_NUMBERS`
 
-```powershell
-Invoke-RestMethod -Method Post `
-  -Uri http://127.0.0.1:4010/control/instances/SEU_INSTANCE_ID/approve `
-  -Headers @{ 'x-admin-key' = 'admin-local' } `
-  -ContentType 'application/json' `
-  -Body '{"approvedBy":"solano","reason":"Liberado para uso"}'
-```
+## Como voce testa por aqui
 
-Exemplo para revogar:
-
-```powershell
-Invoke-RestMethod -Method Post `
-  -Uri http://127.0.0.1:4010/control/instances/SEU_INSTANCE_ID/revoke `
-  -Headers @{ 'x-admin-key' = 'admin-local' } `
-  -ContentType 'application/json' `
-  -Body '{"reason":"Acesso encerrado"}'
-```
-
-## Como outro desenvolvedor comecar (ex: Caio)
-
-### Se o Caio vai apenas programar
-
-1. Clonar o repositorio
-2. Rodar `npm install`
-3. Criar `.env` com base em `.env.example`
-4. Rodar `npm test`
-5. Implementar a alteracao
-6. Te mandar PR ou push, conforme a permissao que voce der no GitHub
-
-Nesse fluxo ele nao precisa de QR Code nem de uma instancia aprovada.
-
-### Se o Caio vai rodar uma instancia propria
-
-Voce precisa fazer 3 coisas daqui:
-
-1. dar a chave de registro que voce decidiu usar
-2. aprovar a instancia dele no backend de controle
-3. garantir que o numero dele esteja autorizado na licenca e, se necessario, em `ADMIN_NUMBERS`
-
-Depois disso, o fluxo dele e:
-
-1. `git clone`
-2. `npm install`
-3. configurar `.env`
-4. `npm run mock:control` se estiver usando o mock local
-5. `npm start`
-6. escanear o QR com o numero que ele vai usar
-7. esperar aprovacao ou reiniciar depois que voce aprovar
-
-## Como voce testar por aqui
-
-Fluxo operacional recomendado:
-
-1. conferir seu `.env`
-2. subir `npm run mock:control` se quiser demonstrar tudo localmente
-3. em outro terminal, rodar `npm start`
-4. esperar os logs:
-   - `Bot conectado`
-   - `Bot online`
-   - `Licenca valida`
-   - `Instancia autorizada pelo controle remoto` ou mensagem de pendencia/revogacao
-5. testar no WhatsApp:
-   - `!ping`
-   - `!status`
-   - `!admin auth`
-   - `!admin usage`
-   - `!welcome`
-6. testar moderacao em grupo com cuidado
-
-Mensagem suspeita de exemplo:
-
-```text
-bet agora https://site-suspeito.com
-```
-
-Esperado:
-
-- mensagem apagada
-- tentativa de remover o usuario do grupo
-- tentativa de bloquear o contato
-- log da acao
-
-## 7. Como rodar os testes
+### Backend
 
 ```bash
-npm test
+npm start
 ```
 
-Cobertura atual:
+### Bot
 
-- loader de comandos
-- parser de comandos
-- fluxo de mensagens
-- cenarios de erro
-- reply service
-- executor central
-- telemetria
-- moderacao
-- admin
-- rate limit
-- auth service
-- control service
-- mock de licenca e controle
-
-## 8. Estrutura de pastas explicada
-
-```text
-bot-wpp/
-├─ commands/
-│  ├─ help.js
-│  ├─ info.js
-│  ├─ ping.js
-│  ├─ status.js
-│  ├─ test.js
-│  ├─ welcome.js
-│  ├─ admin.js
-│  └─ admin/
-│     └─ usage.js
-├─ services/
-│  ├─ authService.js
-│  ├─ commandExecutor.js
-│  ├─ controlService.js
-│  ├─ loggerService.js
-│  ├─ moderationService.js
-│  ├─ replyService.js
-│  └─ usageService.js
-├─ mock-license-api.js
-├─ license.js
-├─ authService.js
-├─ utils/
-│  ├─ isAdmin.js
-│  ├─ rateLimiter.js
-│  ├─ validator.js
-│  └─ validator.test.js
-├─ index.js
-├─ whatsapp.js
-├─ whatsapp.test.js
-├─ .env.example
-├─ package.json
-├─ package-lock.json
-└─ .gitignore
+```bash
+npm run bot:start
 ```
 
-## 9. Observacoes importantes
+### Fluxo esperado
 
+1. backend sobe
+2. bot gera QR
+3. voce escaneia
+4. bot conecta
+5. backend recebe `register`
+6. se a instancia estiver aprovada, o bot continua operando
+
+### Testes manuais uteis
+
+- `!ping`
+- `!status`
+- `!help`
+- `!feedback teste rapido`
+- `!admin usage`
+
+## Scripts
+
+- `npm start`: sobe o backend
+- `npm run dev`: sobe o backend com nodemon
+- `npm run bot:start`: sobe o bot
+- `npm run mock:control`: sobe mock local
+- `npm test`: roda os testes
+
+## Logs
+
+Os logs sao estruturados e cobrem:
+
+- registro de instancia
+- heartbeat
+- aprovacao e revogacao
+- execucao de comandos
+- uso registrado
+- feedback recebido
+
+## Observacoes importantes
+
+- nao versione `.env`
 - nao versione `.wwebjs_auth/`
 - nao versione `.wwebjs_cache/`
 - nao versione `.bot-control/`
-- nao versione `.env`
 - nao versione `node_modules/`
-- `.bot-control/instance.json` guarda a identidade persistente da instancia
-- telemetria fica em memoria e zera ao reiniciar
-- moderacao roda antes dos comandos
-- `CONTROL_REGISTRATION_KEY` deve ser tratada como segredo operacional
-- repositrio publico mostra o codigo, nao concede uso do bot por si so
+- nao versione arquivos `.sqlite`
 
-## 10. Troubleshooting basico
+## Troubleshooting
 
-### O bot bloqueia na inicializacao
+### O bot nao sobe
 
 Verifique nesta ordem:
 
-- `LICENSE_API_URL`
-- `CONTROL_API_URL`
-- `CONTROL_REGISTRATION_KEY`
-- status da instancia no backend de controle
-- se o numero esta permitido pela licenca ou fallback
+1. `LICENSE_API_URL`
+2. `CONTROL_API_URL`
+3. status da instancia no backend
+4. numero autorizado na licenca ou no fallback local
+
+### O backend sobe mas a instancia fica `pending`
+
+Isso nao e bug. Significa que voce ainda nao aprovou a instancia.
+
+### Quero derrubar alguem
+
+Revogue a instancia via endpoint `POST /instances/:id/revoke`.
 
 ### Quero ver quem esta usando
 
-Liste as instancias no backend de controle.
+Consulte `GET /instances` e `GET /usage/summary`.
 
-No mock local:
+### Quero permitir so eu, Caio e mais uma pessoa
 
-```powershell
-Invoke-RestMethod -Method Get `
-  -Uri http://127.0.0.1:4010/control/instances `
-  -Headers @{ 'x-admin-key' = 'admin-local' }
-```
+Voce precisa controlar 3 listas:
 
-### Quero derrubar uma instancia
+1. numeros autorizados na licenca
+2. `ADMIN_NUMBERS` para quem pode usar comandos admin
+3. instancias aprovadas no backend
 
-Revogue a instancia pelo backend. No heartbeat seguinte, o bot encerra.
-
-### O Caio consegue programar sem rodar o bot real?
-
-Sim. Para programar ele precisa de codigo, `npm install` e `npm test`.
-
-### Como aceitar so eu, o Caio e mais uma pessoa?
-
-Modelo recomendado:
-
-1. mantenha `ADMIN_NUMBERS` apenas com os numeros que devem ter poder administrativo
-2. mantenha a licenca remota ou o fallback local apenas com os numeros permitidos
-3. aprove no controle remoto apenas as instancias dessas pessoas
-4. se uma delas perder acesso, revogue a instancia no backend e remova o numero da licenca/admin se necessario
-
-### O que voce precisa fazer daqui para liberar o Caio
-
-- se ele so vai programar: dar acesso no GitHub ou receber PR dele
-- se ele vai operar instancia: entregar `CONTROL_REGISTRATION_KEY`, aprovar a instancia dele e liberar o numero dele na licenca
-
-## Comandos atuais
-
-- `!help`: lista os comandos disponiveis
-- `!info`: mostra horario atual, id do chat e quantidade de argumentos
-- `!ping`: responde com `pong`
-- `!status`: mostra licenca, controle de instancia e uptime
-- `!test`: responde com `comando test funcionando`
-- `!welcome`: exemplo simples de onboarding
-- `!admin status|auth|commands|usage`: comandos administrativos
+Se tirar uma dessas permissoes, a pessoa perde operacao parcial ou total.

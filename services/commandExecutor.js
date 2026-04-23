@@ -1,5 +1,6 @@
 const logger = require('./loggerService');
 const replyService = require('./replyService');
+const backendTelemetryService = require('./backendTelemetryService');
 const usageService = require('./usageService');
 
 const executeCommand = async (command, context) => {
@@ -11,6 +12,7 @@ const executeCommand = async (command, context) => {
     try {
         const value = await command.execute(context.message, context.args, context);
         usageService.registerUsage(command.name, context.message?.from);
+        await backendTelemetryService.reportUsage(command.name, context);
 
         logger.info(`Comando executado com sucesso: ${commandName}`);
 

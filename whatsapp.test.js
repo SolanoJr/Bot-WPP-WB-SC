@@ -4,6 +4,7 @@ const path = require('path');
 const { executeCommand } = require('./services/commandExecutor');
 const authService = require('./services/authService');
 const controlService = require('./services/controlService');
+const backendTelemetryService = require('./services/backendTelemetryService');
 const logger = require('./services/loggerService');
 const replyService = require('./services/replyService');
 const usageService = require('./services/usageService');
@@ -37,6 +38,7 @@ describe('loader de comandos', () => {
         expect(commands.has('help')).toBe(true);
         expect(commands.has('status')).toBe(true);
         expect(commands.has('admin')).toBe(true);
+        expect(commands.has('feedback')).toBe(true);
         expect(commands.has('welcome')).toBe(true);
         expect(commands.get('status')).toEqual(expect.objectContaining({
             name: 'status',
@@ -278,6 +280,34 @@ describe('fluxo de mensagem do WhatsApp', () => {
         expect(reply).toHaveBeenCalledWith('Bem-vindo! Esse é seu primeiro comando.');
     });
 
+    test('deve enviar feedback para o backend pelo comando feedback', async () => {
+        const commands = loadCommands(commandsDir);
+        const client = { id: 'fake-client' };
+        const reply = jest.fn().mockResolvedValue(undefined);
+        const telemetrySpy = jest.spyOn(backendTelemetryService, 'sendFeedback').mockResolvedValue({
+            sent: true
+        });
+        const msg = {
+            body: '!feedback gostei do fluxo',
+            fromMe: false,
+            from: '5511555555555@c.us',
+            reply
+        };
+        const handler = createMessageHandler({ client, commands, startedAt: Date.now() - 1000 });
+
+        await handler(msg);
+
+        expect(telemetrySpy).toHaveBeenCalledWith(
+            expect.objectContaining({
+                client,
+                message: msg,
+                args: ['gostei', 'do', 'fluxo']
+            }),
+            'gostei do fluxo'
+        );
+        expect(reply).toHaveBeenCalledWith('feedback enviado com sucesso');
+    });
+
     test('deve permitir comando admin para numero autorizado', async () => {
         process.env.ADMIN_NUMBERS = '5511999999999@c.us';
         const commands = loadCommands(commandsDir);
@@ -516,6 +546,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
             [
                 'Comandos disponiveis:',
                 '- !admin: Executa comandos administrativos.',
+                '- !feedback: Envia feedback para o backend operacional.',
                 '- !help: Lista os comandos disponiveis.',
                 '- !info: Mostra dados do contexto atual da mensagem.',
                 '- !ping: Responde com pong para validar se o bot esta ativo.',

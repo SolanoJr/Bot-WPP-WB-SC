@@ -88,7 +88,7 @@ describe('control service', () => {
         expect(status.state).toBe('authorized');
         expect(status.operatorName).toBe('solano');
         expect(axios.post).toHaveBeenCalledWith(
-            'https://controle/api/register',
+            'https://controle/api/instances/register',
             expect.objectContaining({
                 number: '5511999999999@c.us',
                 operatorName: 'solano',
@@ -139,5 +139,12 @@ describe('control service', () => {
 
         expect(status.state).toBe('revoked');
         expect(status.reason).toBe('Acesso revogado');
+        expect(axios.post).toHaveBeenCalledWith(
+            'https://controle/api/instances/heartbeat',
+            expect.any(Object),
+            expect.objectContaining({
+                timeout: 5000
+            })
+        );
     });
 });
