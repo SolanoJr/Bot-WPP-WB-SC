@@ -271,8 +271,24 @@ const startBot = () => {
     const startedAt = Date.now();
 
     const client = new Client({
-        authStrategy: new LocalAuth()
-    });
+    authStrategy: new LocalAuth(),
+    webVersion: '2.3000.1015901620',
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1015901620.html'
+    },
+    puppeteer: {
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu'
+        ]
+    }
+});
 
     client.on('qr', (qr) => {
         logger.info('QR gerado');

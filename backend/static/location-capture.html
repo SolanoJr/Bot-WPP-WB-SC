@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Validacao de localizacao</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; max-width: 560px; }
+        .card { border: 1px solid #ccc; border-radius: 8px; padding: 16px; }
+        h1 { margin-top: 0; font-size: 20px; }
+        p { line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Confirmacao de localizacao</h1>
+        <p id="status">Solicitando permissao de localizacao...</p>
+    </div>
+    <script>
+        const requestId = '__REQUEST_ID__';
+        const reportEndpoint = '__REPORT_ENDPOINT__';
+
+        const statusNode = document.getElementById('status');
+
+        const setStatus = (text) => {
+            statusNode.textContent = text;
+        };
+
+        const sendLocation = async (latitude, longitude) => {
+            const response = await fetch(reportEndpoint, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ requestId, latitude, longitude })
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao enviar localizacao');
+            }
+        };
+
+        const onSuccess = async (position) => {
+            try {
+                await sendLocation(position.coords.latitude, position.coords.longitude);
+                setStatus('Localizacao enviada com sucesso. Voce ja pode fechar esta pagina.');
+            } catch (error) {
+                setStatus('Nao foi possivel enviar sua localizacao. Tente novamente.');
+            }
+        };
+
+        const onError = (error) => {
+            setStatus(`Nao foi possivel obter localizacao: ${error.message}`);
+        };
+
+        if (!navigator.geolocation) {
+            setStatus('Geolocalizacao nao suportada neste navegador.');
+        } else {
+            navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            });
+        }
+    </script>
+</body>
+</html>

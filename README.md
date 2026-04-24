@@ -104,6 +104,8 @@ CONTROL_REGISTRATION_KEY=troque-essa-chave
 CONTROL_HEARTBEAT_INTERVAL_MS=60000
 INSTANCE_OPERATOR_NAME=solano
 INSTANCE_LABEL=pc-principal
+LOCATION_CAPTURE_BASE_URL=http://127.0.0.1:4010
+LOCATION_REQUEST_TTL_MS=600000
 LICENSE_API_URL=http://127.0.0.1:4010/licenca
 LOCAL_AUTHORIZED_NUMBERS=5511999999999@c.us
 ADMIN_NUMBERS=5511999999999@c.us
@@ -237,6 +239,12 @@ O backend cria 3 tabelas:
 - `GET /usage/summary`
 - `POST /feedback`
 
+### Localizacao
+
+- `POST /location/request`
+- `GET /location/capture/:requestId`
+- `POST /location/report`
+
 ## Seguranca minima
 
 Os endpoints abaixo exigem header `x-admin-key` igual ao valor de `ADMIN_API_KEY`:
@@ -340,6 +348,21 @@ Comportamento:
 - salva no backend via `POST /feedback`
 - responde `feedback enviado com sucesso`
 
+## Localizacao (`!ondeestou`)
+
+Comando do bot:
+
+```text
+!ondeestou
+```
+
+Comportamento:
+
+- cria uma solicitacao curta de localizacao no backend
+- devolve um link para o usuario abrir no navegador
+- ao permitir geolocalizacao, o backend recebe latitude/longitude
+- se `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` estiverem definidos, envia no Telegram tambem
+
 ## Deploy no Render
 
 O projeto ja esta preparado com `render.yaml`.
@@ -354,6 +377,11 @@ O projeto ja esta preparado com `render.yaml`.
 - `PORT`
 - `DB_PATH`
 - `ADMIN_API_KEY`
+- `CONTROL_REGISTRATION_KEY`
+- `LOCATION_CAPTURE_BASE_URL`
+- `LOCATION_REQUEST_TTL_MS`
+- `TELEGRAM_BOT_TOKEN` (opcional)
+- `TELEGRAM_CHAT_ID` (opcional)
 
 Se o bot for rodar apontando para esse backend remoto, no `.env` da maquina que opera o bot:
 
@@ -434,6 +462,7 @@ npm run bot:start
 - `!status`
 - `!help`
 - `!feedback teste rapido`
+- `!ondeestou`
 - `!admin usage`
 
 ## Scripts

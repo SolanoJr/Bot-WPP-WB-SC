@@ -28,6 +28,8 @@ describe('backend app', () => {
         dbPath = path.join(os.tmpdir(), `bot-wpp-backend-${Date.now()}-${Math.random()}.sqlite`);
         process.env.DB_PATH = dbPath;
         process.env.ADMIN_API_KEY = 'admin-secret';
+        process.env.CONTROL_REGISTRATION_KEY = 'control-secret';
+        process.env.LOCATION_CAPTURE_BASE_URL = 'http://127.0.0.1:4010';
 
         const started = await startTestServer();
         server = started.server;
@@ -51,6 +53,8 @@ describe('backend app', () => {
 
         delete process.env.DB_PATH;
         delete process.env.ADMIN_API_KEY;
+        delete process.env.CONTROL_REGISTRATION_KEY;
+        delete process.env.LOCATION_CAPTURE_BASE_URL;
     });
 
     test('deve registrar, aprovar, registrar uso e feedback e consultar resumo', async () => {
@@ -133,5 +137,45 @@ describe('backend app', () => {
         expect(summary.usageByGroup).toEqual([
             expect.objectContaining({ groupId: 'grupo@g.us', count: 1 })
         ]);
+    });
+
+    test('deve criar solicitacao de localizacao e aceitar reporte', async () => {
+        const requestResponse = await fetch(`${baseUrl}/location/request`, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+                'x-control-key': 'control-secret'
+            },
+            body: JSON.stringify({
+                instanceId: 'inst-1',
+                userId: '5511000000000@c.us',
+                groupId: 'grupo@g.us'
+            })
+        });
+        const requestData = await requestResponse.json();
+
+        expect(requestResponse.status).toBe(201);
+        expect(requestData.captureUrl).toContain('/location/capture/');
+
+        const captureResponse = await fetch(`${baseUrl}/location/capture/${requestData.requestId}`);
+        const captureHtml = await captureResponse.text();
+
+        expect(captureResponse.status).toBe(200);
+        expect(captureHtml).toContain(requestData.requestId);
+
+        const reportResponse = await fetch(`${baseUrl}/location/report`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+                requestId: requestData.requestId,
+                latitude: -23.55,
+                longitude: -46.63
+            })
+        });
+        const reportData = await reportResponse.json();
+
+        expect(reportResponse.status).toBe(201);
+        expect(reportData.ok).toBe(true);
+        expect(reportData.mapsUrl).toContain('-23.55,-46.63');
     });
 });

@@ -549,6 +549,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
                 '- !feedback: Envia feedback para o backend operacional.',
                 '- !help: Lista os comandos disponiveis.',
                 '- !info: Mostra dados do contexto atual da mensagem.',
+                '- !ondeestou: Gera um link para capturar localizacao via navegador.',
                 '- !ping: Responde com pong para validar se o bot esta ativo.',
                 '- !status: Mostra o estado atual do bot.',
                 '- !test: Confirma que o comando de teste esta funcionando.',

@@ -9,6 +9,7 @@ createSchema();
 const { registerInstanceRoutes } = require('./routes/instanceRoutes');
 const { registerUsageRoutes } = require('./routes/usageRoutes');
 const { registerFeedbackRoutes } = require('./routes/feedbackRoutes');
+const { registerLocationRoutes } = require('./routes/locationRoutes');
 
 const createApp = () => {
     const app = express();
@@ -26,6 +27,7 @@ const createApp = () => {
     registerInstanceRoutes(app);
     registerUsageRoutes(app);
     registerFeedbackRoutes(app);
+    registerLocationRoutes(app);
 
     app.use((req, res) => {
         return res.status(404).json({
