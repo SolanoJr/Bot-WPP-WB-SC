@@ -9,11 +9,15 @@ createSchema();
 const { registerInstanceRoutes } = require('./routes/instanceRoutes');
 const { registerUsageRoutes } = require('./routes/usageRoutes');
 const { registerFeedbackRoutes } = require('./routes/feedbackRoutes');
+const { registerLocationRoutes } = require('./routes/locationRoutes');
 
 const createApp = () => {
     const app = express();
 
     app.use(express.json());
+
+    // Servir arquivos estáticos da pasta public
+    app.use(express.static(require('path').join(__dirname, '../public')));
 
     app.get('/health', (req, res) => {
         return res.status(200).json({
@@ -26,6 +30,7 @@ const createApp = () => {
     registerInstanceRoutes(app);
     registerUsageRoutes(app);
     registerFeedbackRoutes(app);
+    registerLocationRoutes(app);
 
     app.use((req, res) => {
         return res.status(404).json({

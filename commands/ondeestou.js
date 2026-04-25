@@ -1,6 +1,8 @@
+const axios = require('axios');
+
 module.exports = {
     name: 'ondeestou',
-    description: 'Verifica sua localização e informações do grupo com link de mapa.',
+    description: 'Obtém sua localização precisa via GPS do navegador.',
 
     async execute(msg, args, context) {
         void msg;
@@ -11,55 +13,80 @@ module.exports = {
         const groupName = context.message?.chat?.name || 'Grupo sem nome';
         const participantNumber = context.message?.from || 'Número não identificado';
         
-        // Simular coordenadas baseadas no padrão do número (para demonstração)
-        // Em produção, poderia integrar com API de geolocalização real
-        const generateMockCoords = (phoneNumber) => {
-            // Gera coordenadas consistentes baseadas no número
-            const hash = phoneNumber.replace(/\D/g, '').slice(-8);
-            const lat = -23.5505 + (parseInt(hash.slice(0,4)) - 5000) * 0.001;
-            const lng = -46.6333 + (parseInt(hash.slice(4,8)) - 5000) * 0.001;
-            return { latitude: lat.toFixed(6), longitude: lng.toFixed(6) };
-        };
-        
-        const coords = generateMockCoords(participantNumber);
-        const mapsLink = `https://www.google.com/maps?q=${coords.latitude},${coords.longitude}`;
-        
-        const response = [
-            '📍 **SUA LOCALIZAÇÃO**',
-            '',
-            `📱 **Chat ID:** ${chatId}`,
-            `👥 **Tipo:** ${isGroup ? 'Grupo' : 'Conversa Privada'}`,
-            isGroup ? `📝 **Nome do Grupo:** ${groupName}` : '',
-            `🔢 **Seu Número:** ${participantNumber}`,
-            '',
-            `🌍 **Coordenadas:**`,
-            `📍 **Latitude:** ${coords.latitude}`,
-            `📍 **Longitude:** ${coords.longitude}`,
-            '',
-            `🗺️ **Mapa:** ${mapsLink}`,
-            '',
-            `⏰ **Horário:** ${new Date(context.timestamp).toLocaleString('pt-BR')}`,
-            '',
-            `🤖 **Status do Bot:** Online`,
-            '',
-            `💡 *Para localização precisa, use um navegador com GPS ativado*`
-        ].filter(Boolean).join('\n');
-
-        await context.replyService.sendText(context, response);
-        
-        // Opcional: registrar no backend para telemetria
         try {
-            if (context.backendService) {
-                await context.backendService.registerLocation({
-                    chatId,
-                    participantNumber,
-                    latitude: coords.latitude,
-                    longitude: coords.longitude,
-                    timestamp: context.timestamp
-                });
+            // Obter URL do backend
+            const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:4010';
+            
+            // Solicitar token de localização
+            const response = await axios.post(`${backendUrl}/location/request/${participantNumber}`, {
+                chatId,
+                messageId: context.message?.id?.id || 'unknown'
+            });
+            
+            if (response.data.success) {
+                const locationUrl = response.data.locationUrl;
+                
+                const message = [
+                    '📍 **LOCALIZAÇÃO PRECISA**',
+                    '',
+                    'Para obter sua localização exata:',
+                    '',
+                    `1️⃣ **Clique no link abaixo:**`,
+                    `${locationUrl}`,
+                    '',
+                    '2️⃣ **Permitir o acesso ao GPS** quando solicitado',
+                    '',
+                    '3️⃣ **Aguarde o envio automático**',
+                    '',
+                    `⏰ **Link válido por:** 10 minutos`,
+                    '',
+                    `📱 **Seu número:** ${participantNumber}`,
+                    `👥 **Grupo:** ${isGroup ? groupName : 'Conversa Privada'}`,
+                    '',
+                    `🤖 **Status:** Aguardando localização...`
+                ].filter(Boolean).join('\n');
+
+                await context.replyService.sendText(context, message);
+                
+                // Opcional: registrar solicitação no backend
+                try {
+                    if (context.backendService) {
+                        await context.backendService.registerLocationRequest({
+                            chatId,
+                            participantNumber,
+                            token: response.data.token,
+                            timestamp: context.timestamp
+                        });
+                    }
+                } catch (error) {
+                    // Silencioso
+                }
+                
+            } else {
+                throw new Error('Falha ao gerar link de localização');
             }
+            
         } catch (error) {
-            // Silencioso - não quebra o comando se backend falhar
+            console.error('Erro ao solicitar localização:', error);
+            
+            // Fallback para informações básicas
+            const fallbackMessage = [
+                '📍 **INFORMAÇÕES BÁSICAS**',
+                '',
+                `📱 **Chat ID:** ${chatId}`,
+                `👥 **Tipo:** ${isGroup ? 'Grupo' : 'Conversa Privada'}`,
+                isGroup ? `📝 **Nome do Grupo:** ${groupName}` : '',
+                `🔢 **Seu Número:** ${participantNumber}`,
+                '',
+                `⏰ **Horário:** ${new Date(context.timestamp).toLocaleString('pt-BR')}`,
+                '',
+                `❌ **Serviço de localização indisponível**`,
+                `🔄 **Tente novamente em alguns minutos**`,
+                '',
+                `🤖 **Status do Bot:** Online`
+            ].filter(Boolean).join('\n');
+
+            await context.replyService.sendText(context, fallbackMessage);
         }
     }
 };
