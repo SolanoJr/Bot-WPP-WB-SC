@@ -120,6 +120,12 @@
                 return;
             }
 
+            // Verificar se é HTTPS
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                showHttpWarning();
+                return;
+            }
+
             const options = {
                 enableHighAccuracy: true,
                 timeout: 30000,
@@ -136,6 +142,73 @@
                 },
                 options
             );
+        }
+
+        function showHttpWarning() {
+            document.getElementById('status').innerHTML = `
+                <div class="status error">
+                    <h3>⚠️ Localização Requer HTTPS</h3>
+                    <p>Por segurança, navegadores bloqueiam GPS em HTTP.</p>
+                    <p><strong>Opções:</strong></p>
+                    <p>1️⃣ Use um navegador desktop e permita "localização insegura"</p>
+                    <p>2️⃣ Acesse via HTTPS (se disponível)</p>
+                    <p>3️⃣ Use o navegador Chrome com flags de desenvolvimento</p>
+                    <br>
+                    <button class="btn" onclick="tryInsecureLocation()">Tentar Mesmo Assim</button>
+                    <button class="btn" onclick="showManualLocation()">Inserir Manualmente</button>
+                </div>
+            `;
+        }
+
+        function tryInsecureLocation() {
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 30000,
+                maximumAge: 0
+            };
+
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    currentPosition = position;
+                    showLocation(position);
+                },
+                error => {
+                    showError(getErrorMessage(error));
+                },
+                options
+            );
+        }
+
+        function showManualLocation() {
+            document.getElementById('status').innerHTML = `
+                <div class="status">
+                    <h3>📍 Inserir Localização Manual</h3>
+                    <p>Se você não conseguir usar GPS, pode inserir manualmente:</p>
+                    <input type="number" id="manualLat" placeholder="Latitude (ex: -23.5505)" step="0.000001" style="width: 100%; margin: 10px 0; padding: 10px; border-radius: 5px; border: none;">
+                    <input type="number" id="manualLng" placeholder="Longitude (ex: -46.6333)" step="0.000001" style="width: 100%; margin: 10px 0; padding: 10px; border-radius: 5px; border: none;">
+                    <button class="btn" onclick="useManualLocation()">Usar Coordenadas</button>
+                </div>
+            `;
+        }
+
+        function useManualLocation() {
+            const lat = parseFloat(document.getElementById('manualLat').value);
+            const lng = parseFloat(document.getElementById('manualLng').value);
+            
+            if (isNaN(lat) || isNaN(lng)) {
+                showError('Coordenadas inválidas.');
+                return;
+            }
+            
+            currentPosition = {
+                coords: {
+                    latitude: lat,
+                    longitude: lng,
+                    accuracy: 100 // Precisão estimada para manual
+                }
+            };
+            
+            showLocation(currentPosition);
         }
 
         function showLocation(position) {
