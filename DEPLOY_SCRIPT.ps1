@@ -28,10 +28,12 @@ pm2 list &&
 echo '=== INICIANDO DEPLOY ===' && 
 git fetch --all && 
 git reset --hard origin/main && 
-npm ci && 
+(npm ci || npm install) && 
 pm2 restart bot-wpp --update-env && 
 test -f backend/app.js && pm2 restart bot-backend --update-env || true && 
 pm2 save && 
+echo '=== SMOKE TEST ===' && 
+curl -s http://127.0.0.1:4010/health | python3 -m json.tool && 
 echo '=== DEPLOY CONCLUÍDO ===' && 
 pm2 list && 
 pm2 logs bot-wpp --lines 10 --nostream
