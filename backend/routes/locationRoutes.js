@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const whatsappService = require('../../services/whatsappService');
 
 // Armazenamento temporário de solicitações de localização
 const locationRequests = new Map();
@@ -45,7 +46,7 @@ router.post('/request/:userId', (req, res) => {
 });
 
 // Rota para receber localização do frontend
-router.post('/submit/:token', (req, res) => {
+router.post('/submit/:token', async (req, res) => {
     const { token } = req.params;
     const { latitude, longitude, accuracy } = req.body;
     
@@ -95,17 +96,29 @@ router.post('/submit/:token', (req, res) => {
         `🤖 **Status do Bot:** Localização processada com sucesso!`
     ].join('\n');
     
-    // Salvar resposta para ser enviada ao WhatsApp (implementar webhook)
-    // Por enquanto, apenas log
-    console.log('Mensagem WhatsApp:', whatsappResponse);
+    // Enviar resposta para o WhatsApp
+    try {
+        const success = await whatsappService.sendLocationResponse(request.chatId, {
+            latitude,
+            longitude,
+            accuracy
+        });
+        
+        if (success) {
+            console.log('Resposta enviada com sucesso para WhatsApp');
+        } else {
+            console.log('Falha ao enviar resposta para WhatsApp');
+        }
+    } catch (error) {
+        console.error('Erro ao enviar resposta WhatsApp:', error);
+    }
     
     // Remover solicitação usada
     locationRequests.delete(token);
     
     res.json({
         success: true,
-        message: 'Localização recebida com sucesso',
-        whatsappResponse: whatsappResponse // Retornar mensagem para possível webhook
+        message: 'Localização recebida com sucesso'
     });
 });
 

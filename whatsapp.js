@@ -5,6 +5,7 @@ const path = require('path');
 const { executeCommand } = require('./services/commandExecutor');
 const moderationService = require('./services/moderationService');
 const replyService = require('./services/replyService');
+const whatsappService = require('./services/whatsappService');
 const { isValidCommand } = require('./utils/validator');
 
 const COMMAND_PREFIX = '!';
@@ -164,6 +165,8 @@ const startBot = () => {
 
     client.on('ready', () => {
         console.log('Bot online');
+        // Inicializar serviço WhatsApp com o cliente
+        whatsappService.initializeWhatsApp(client);
     });
 
     client.on('message_create', createMessageHandler({ client, commands }));
