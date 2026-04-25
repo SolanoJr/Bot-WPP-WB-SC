@@ -1,4 +1,10 @@
 const axios = require('axios');
+const https = require('https');
+
+// Configurar axios para ignorar certificado auto-assinado
+const httpsAgent = new https.Agent({
+    rejectUnauthorized: false
+});
 
 module.exports = {
     name: 'ondeestou',
@@ -21,6 +27,8 @@ module.exports = {
             const response = await axios.post(`${backendUrl}/location/request/${participantNumber}`, {
                 chatId,
                 messageId: context.message?.id?.id || 'unknown'
+            }, {
+                httpsAgent: httpsAgent
             });
             
             if (response.data.success) {
