@@ -3,6 +3,7 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const fs = require('fs');
 const path = require('path');
 const { executeCommand } = require('./services/commandExecutor');
+const moderationService = require('./services/moderationService');
 const replyService = require('./services/replyService');
 const { isValidCommand } = require('./utils/validator');
 
@@ -116,6 +117,12 @@ const buildCommandContext = ({ client, message, args, commands }) => {
 const createMessageHandler = ({ client, commands }) => {
     return async (msg) => {
         if (msg.fromMe) {
+            return;
+        }
+
+        const moderationActionTaken = await moderationService.handleModeration(client, msg);
+
+        if (moderationActionTaken) {
             return;
         }
 

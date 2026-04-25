@@ -2,6 +2,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { executeCommand } = require('./services/commandExecutor');
+const usageService = require('./services/usageService');
+const moderationService = require('./services/moderationService');
 const replyService = require('./services/replyService');
 const {
     buildCommandContext,
@@ -24,11 +26,13 @@ describe('loader de comandos', () => {
         const testCommand = commands.get('test');
         const info = commands.get('info');
         const help = commands.get('help');
+        const admin = commands.get('admin');
 
         expect(commands.has('ping')).toBe(true);
         expect(commands.has('test')).toBe(true);
         expect(commands.has('info')).toBe(true);
         expect(commands.has('help')).toBe(true);
+        expect(commands.has('admin')).toBe(true);
         expect(ping).toEqual(expect.objectContaining({
             name: 'ping',
             description: expect.any(String),
@@ -46,6 +50,11 @@ describe('loader de comandos', () => {
         }));
         expect(help).toEqual(expect.objectContaining({
             name: 'help',
+            description: expect.any(String),
+            execute: expect.any(Function)
+        }));
+        expect(admin).toEqual(expect.objectContaining({
+            name: 'admin',
             description: expect.any(String),
             execute: expect.any(Function)
         }));
@@ -119,6 +128,10 @@ describe('reply service', () => {
 });
 
 describe('executor de comandos', () => {
+    beforeEach(() => {
+        usageService.resetUsage();
+    });
+
     afterEach(() => {
         jest.restoreAllMocks();
     });
@@ -130,7 +143,7 @@ describe('executor de comandos', () => {
         };
         const context = {
             args: ['1'],
-            message: { reply: jest.fn() }
+            message: { reply: jest.fn(), from: '5511000000000@c.us' }
         };
         const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
@@ -144,6 +157,7 @@ describe('executor de comandos', () => {
         });
         expect(command.execute).toHaveBeenCalledWith(context.message, context.args, context);
         expect(logSpy).toHaveBeenCalled();
+        expect(usageService.getCommandUsage()).toEqual({ fake: 1 });
     });
 
     test('deve retornar resultado padronizado em falha e responder erro', async () => {
@@ -154,7 +168,7 @@ describe('executor de comandos', () => {
         };
         const context = {
             args: [],
-            message: { reply }
+            message: { reply, from: '5511999999999@c.us' }
         };
         const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -165,17 +179,24 @@ describe('executor de comandos', () => {
         expect(result.error).toBeInstanceOf(Error);
         expect(reply).toHaveBeenCalledWith('Erro ao executar comando');
         expect(errorSpy).toHaveBeenCalled();
+        expect(usageService.getCommandUsage()).toEqual({});
     });
 });
 
 describe('fluxo de mensagem do WhatsApp', () => {
+    beforeEach(() => {
+        moderationService.resetModerationState();
+        usageService.resetUsage();
+    });
+
     afterEach(() => {
         jest.restoreAllMocks();
+        delete process.env.ADMIN_IDS;
     });
 
     test('deve executar o comando correto e responder ao receber !test', async () => {
         const commands = loadCommands(commandsDir);
-        const client = { id: 'fake-client' };
+        const client = { id: 'fake-client', blockContact: jest.fn() };
         const reply = jest.fn().mockResolvedValue(undefined);
         const msg = {
             body: '!test',
@@ -208,7 +229,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
 
     test('deve executar o comando info usando context e replyService', async () => {
         const commands = loadCommands(commandsDir);
-        const client = { id: 'fake-client' };
+        const client = { id: 'fake-client', blockContact: jest.fn() };
         const reply = jest.fn().mockResolvedValue(undefined);
         const msg = {
             body: '!info a b',
@@ -231,7 +252,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
 
     test('deve listar comandos validos em ordem alfabetica no help', async () => {
         const commands = loadCommands(commandsDir);
-        const client = { id: 'fake-client' };
+        const client = { id: 'fake-client', blockContact: jest.fn() };
         const reply = jest.fn().mockResolvedValue(undefined);
         const msg = {
             body: '!help',
@@ -246,6 +267,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
         expect(reply).toHaveBeenCalledWith(
             [
                 'Comandos disponiveis:',
+                '- !admin: Comandos administrativos. Uso: !admin usage',
                 '- !help: Lista os comandos disponiveis.',
                 '- !info: Mostra dados do contexto atual da mensagem.',
                 '- !ping: Responde com pong para validar se o bot esta ativo.',
@@ -256,7 +278,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
 
     test('deve ignorar comando inexistente sem quebrar', async () => {
         const commands = loadCommands(commandsDir);
-        const client = { id: 'fake-client' };
+        const client = { id: 'fake-client', blockContact: jest.fn() };
         const reply = jest.fn().mockResolvedValue(undefined);
         const msg = {
             body: '!abc',
@@ -271,7 +293,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
 
     test('deve ignorar mensagem com apenas prefixo sem quebrar', async () => {
         const commands = loadCommands(commandsDir);
-        const client = { id: 'fake-client' };
+        const client = { id: 'fake-client', blockContact: jest.fn() };
         const reply = jest.fn().mockResolvedValue(undefined);
         const msg = {
             body: '!',
@@ -286,7 +308,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
 
     test('deve ignorar mensagem enviada pelo proprio bot', async () => {
         const commands = loadCommands(commandsDir);
-        const client = { id: 'fake-client' };
+        const client = { id: 'fake-client', blockContact: jest.fn() };
         const reply = jest.fn().mockResolvedValue(undefined);
         const msg = {
             body: '!test',
@@ -310,7 +332,7 @@ describe('fluxo de mensagem do WhatsApp', () => {
             execute: jest.fn().mockRejectedValue(new Error('falhou'))
         };
         const commands = new Map([['explode', failingCommand]]);
-        const client = { id: 'fake-client' };
+        const client = { id: 'fake-client', blockContact: jest.fn() };
         const msg = {
             body: '!explode',
             fromMe: false,
@@ -323,6 +345,76 @@ describe('fluxo de mensagem do WhatsApp', () => {
         expect(failingCommand.execute).toHaveBeenCalledTimes(1);
         expect(reply).toHaveBeenCalledWith('Erro ao executar comando');
         expect(errorSpy).toHaveBeenCalled();
+    });
+
+    test('mensagem spam nao deve executar comando', async () => {
+        const commands = loadCommands(commandsDir);
+        const client = { id: 'fake-client', blockContact: jest.fn().mockResolvedValue(undefined) };
+        const reply = jest.fn().mockResolvedValue(undefined);
+        const msg = {
+            body: '!test http://spam.com',
+            fromMe: false,
+            from: '5511777000000@g.us',
+            author: '5511666000000@c.us',
+            delete: jest.fn().mockResolvedValue(undefined),
+            getChat: jest.fn().mockResolvedValue({ isGroup: false }),
+            reply
+        };
+        const command = commands.get('test');
+        const executeSpy = jest.spyOn(command, 'execute');
+        const handler = createMessageHandler({ client, commands });
+
+        await handler(msg);
+
+        expect(msg.delete).toHaveBeenCalledWith(true);
+        expect(client.blockContact).toHaveBeenCalledWith('5511666000000@c.us');
+        expect(executeSpy).not.toHaveBeenCalled();
+        expect(reply).not.toHaveBeenCalled();
+    });
+
+    test('mensagem normal deve executar comando', async () => {
+        const commands = loadCommands(commandsDir);
+        const client = { id: 'fake-client', blockContact: jest.fn().mockResolvedValue(undefined) };
+        const reply = jest.fn().mockResolvedValue(undefined);
+        const msg = {
+            body: '!ping',
+            fromMe: false,
+            from: '5511777123123@c.us',
+            reply
+        };
+
+        const handler = createMessageHandler({ client, commands });
+
+        await handler(msg);
+
+        expect(reply).toHaveBeenCalledWith('pong');
+    });
+
+    test('comando admin usage deve responder somente para admin', async () => {
+        process.env.ADMIN_IDS = '5511000000000@c.us';
+        usageService.registerUsage('test', '5511000000000@c.us');
+        usageService.registerUsage('ping', '5511888888888@c.us');
+        usageService.registerUsage('test', '5511000000000@c.us');
+
+        const commands = loadCommands(commandsDir);
+        const client = { id: 'fake-client', blockContact: jest.fn() };
+        const reply = jest.fn().mockResolvedValue(undefined);
+        const msg = {
+            body: '!admin usage',
+            fromMe: false,
+            from: '5511000000000@c.us',
+            reply
+        };
+
+        const handler = createMessageHandler({ client, commands });
+        await handler(msg);
+
+        expect(reply).toHaveBeenCalledWith(
+            expect.stringContaining('Uso de comandos:')
+        );
+        expect(reply).toHaveBeenCalledWith(
+            expect.stringContaining('Top usuarios:')
+        );
     });
 
     test('deve montar um context consistente para os comandos', () => {
