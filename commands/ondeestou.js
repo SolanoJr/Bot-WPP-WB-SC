@@ -15,7 +15,7 @@ module.exports = {
         
         try {
             // Obter URL do backend
-            const backendUrl = process.env.BACKEND_URL || 'http://100.101.218.16:4010';
+            const backendUrl = process.env.BACKEND_URL || 'https://bot.seudominio.com';
             
             // Solicitar token de localização
             const response = await axios.post(`${backendUrl}/location/request/${participantNumber}`, {
