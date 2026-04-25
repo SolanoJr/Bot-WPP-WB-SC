@@ -33,7 +33,7 @@ router.post('/request/:userId', (req, res) => {
     }
     
     // Retornar URL para o usuário
-    const backendUrl = process.env.BACKEND_URL || 'https://bot.seudominio.com';
+    const backendUrl = process.env.BACKEND_URL || 'https://100.101.218.16:8443';
     const locationUrl = `${backendUrl}/location_simple.html?token=${token}`;
     
     res.json({

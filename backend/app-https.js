@@ -54,7 +54,7 @@ const createApp = () => {
 };
 
 const startServer = () => {
-    const port = Number(process.env.HTTPS_PORT || 443);
+    const port = Number(process.env.HTTPS_PORT || 8443);
     const app = createApp();
     
     // Opções SSL
