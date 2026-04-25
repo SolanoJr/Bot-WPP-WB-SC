@@ -34,7 +34,7 @@ router.post('/request/:userId', (req, res) => {
     
     // Retornar URL para o usuário
     const backendUrl = process.env.BACKEND_URL || 'http://100.101.218.16:4010';
-    const locationUrl = `${backendUrl}/location.html?token=${token}`;
+    const locationUrl = `${backendUrl}/location_simple.html?token=${token}`;
     
     res.json({
         success: true,
