@@ -11,6 +11,9 @@ const logError = (message, metadata = {}) => {
 };
 
 module.exports = {
+    info: logInfo,
+    warn: logWarning,
+    error: logError,
     logInfo,
     logWarning,
     logError
