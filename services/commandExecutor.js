@@ -1,4 +1,5 @@
 const replyService = require('./replyService');
+const usageService = require('./usageService');
 
 const executeCommand = async (command, context) => {
     const commandName = command?.name || 'desconhecido';
@@ -7,6 +8,8 @@ const executeCommand = async (command, context) => {
 
     try {
         const value = await command.execute(context.message, context.args, context);
+
+        usageService.registerUsage(command.name, context.message.from);
 
         console.log(`Comando executado com sucesso: ${commandName}`);
 
