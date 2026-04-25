@@ -76,12 +76,36 @@ router.post('/submit/:token', (req, res) => {
     
     console.log('Localização recebida:', locationData);
     
+    // Gerar link do Google Maps
+    const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    
+    // Criar mensagem de resposta para o WhatsApp
+    const whatsappResponse = [
+        '📍 **LOCALIZAÇÃO RECEBIDA COM SUCESSO!**',
+        '',
+        '🌍 **Suas Coordenadas:**',
+        `📍 **Latitude:** ${latitude}`,
+        `📍 **Longitude:** ${longitude}`,
+        `🎯 **Precisão:** ±${accuracy} metros`,
+        '',
+        `🗺️ **Ver no Maps:** ${mapsLink}`,
+        '',
+        `⏰ **Data/Hora:** ${new Date().toLocaleString('pt-BR')}`,
+        '',
+        `🤖 **Status do Bot:** Localização processada com sucesso!`
+    ].join('\n');
+    
+    // Salvar resposta para ser enviada ao WhatsApp (implementar webhook)
+    // Por enquanto, apenas log
+    console.log('Mensagem WhatsApp:', whatsappResponse);
+    
     // Remover solicitação usada
     locationRequests.delete(token);
     
     res.json({
         success: true,
-        message: 'Localização recebida com sucesso'
+        message: 'Localização recebida com sucesso',
+        whatsappResponse: whatsappResponse // Retornar mensagem para possível webhook
     });
 });
 
