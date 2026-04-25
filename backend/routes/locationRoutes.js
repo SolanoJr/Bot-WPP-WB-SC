@@ -7,8 +7,11 @@ const locationRequests = new Map();
 // Rota para solicitar localização
 router.post('/request/:userId', (req, res) => {
     const { userId } = req.params;
-    const chatId = req.body.chatId;
-    const messageId = req.body.messageId;
+    
+    console.log('Dados recebidos:', { body: req.body, params: req.params });
+    
+    const chatId = req.body?.chatId || 'unknown';
+    const messageId = req.body?.messageId || 'unknown';
     
     // Gerar token único para esta solicitação
     const token = `loc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -30,8 +33,8 @@ router.post('/request/:userId', (req, res) => {
     }
     
     // Retornar URL para o usuário
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const locationUrl = `${frontendUrl}/location?token=${token}`;
+    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:4010';
+    const locationUrl = `${backendUrl}/location.html?token=${token}`;
     
     res.json({
         success: true,
