@@ -26,9 +26,12 @@ echo '=== ANTES DO DEPLOY ===' &&
 git rev-parse --short HEAD && 
 pm2 list && 
 echo '=== INICIANDO DEPLOY ===' && 
-git pull && 
+git fetch --all && 
+git reset --hard origin/main && 
 npm ci && 
 pm2 restart bot-wpp --update-env && 
+test -f backend/app.js && pm2 restart bot-backend --update-env || true && 
+pm2 save && 
 echo '=== DEPLOY CONCLUÍDO ===' && 
 pm2 list && 
 pm2 logs bot-wpp --lines 10 --nostream
