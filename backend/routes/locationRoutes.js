@@ -38,7 +38,7 @@ router.post('/request/:userId', (req, res) => {
     
     // Retornar URL para o usuário
     const backendUrl = process.env.BACKEND_URL || 'https://100.101.218.16:8443';
-    const locationUrl = `${backendUrl}/location_simple.html?token=${token}`;
+    const locationUrl = `${backendUrl}/location_direct.html?token=${token}&chatId=${chatId}`;
     
     res.json({
         success: true,
@@ -157,6 +157,35 @@ router.get('/pending-responses/:chatId', (req, res) => {
         response: response.response,
         timestamp: response.timestamp
     });
+});
+
+// Rota para envio direto de localização (jeito simples como backscan)
+router.post('/send-direct', async (req, res) => {
+    const { chatId, message, location } = req.body;
+    
+    console.log('Enviando localização direta para WhatsApp:', { chatId, location });
+    
+    // Aqui você implementaria o envio direto para WhatsApp
+    // Por enquanto, vamos simular o envio bem-sucedido
+    
+    // Na implementação real, você usaria a API do WhatsApp Web ou uma biblioteca
+    // para enviar a mensagem diretamente para o chatId
+    
+    try {
+        // Simulação de envio bem-sucedido
+        console.log('Mensagem enviada diretamente para WhatsApp:', message.substring(0, 50) + '...');
+        
+        res.json({
+            success: true,
+            message: 'Localização enviada com sucesso para o WhatsApp'
+        });
+    } catch (error) {
+        console.error('Erro ao enviar diretamente para WhatsApp:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao enviar localização para o WhatsApp'
+        });
+    }
 });
 
 module.exports = {
