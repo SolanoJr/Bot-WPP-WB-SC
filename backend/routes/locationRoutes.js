@@ -5,6 +5,9 @@ const whatsappService = require('../../services/whatsappService');
 // Armazenamento temporário de solicitações de localização
 const locationRequests = new Map();
 
+// Armazenamento de respostas pendentes para WhatsApp
+const pendingResponses = new Map();
+
 // Rota para solicitar localização
 router.post('/request/:userId', (req, res) => {
     const { userId } = req.params;
@@ -96,22 +99,13 @@ router.post('/submit/:token', async (req, res) => {
         `🤖 **Status do Bot:** Localização processada com sucesso!`
     ].join('\n');
     
-    // Enviar resposta para o WhatsApp
-    try {
-        const success = await whatsappService.sendLocationResponse(request.chatId, {
-            latitude,
-            longitude,
-            accuracy
-        });
-        
-        if (success) {
-            console.log('Resposta enviada com sucesso para WhatsApp');
-        } else {
-            console.log('Falha ao enviar resposta para WhatsApp');
-        }
-    } catch (error) {
-        console.error('Erro ao enviar resposta WhatsApp:', error);
-    }
+    // Armazenar resposta para ser consumida pelo bot-wpp
+    pendingResponses.set(request.chatId, {
+        response: whatsappResponse,
+        timestamp: Date.now()
+    });
+    
+    console.log('Resposta armazenada para WhatsApp:', request.chatId);
     
     // Remover solicitação usada
     locationRequests.delete(token);
@@ -140,6 +134,28 @@ router.get('/status/:token', (req, res) => {
         success: true,
         remainingTime: Math.max(0, remainingTime),
         expires: new Date(request.timestamp + 600000).toISOString()
+    });
+});
+
+// Rota para obter respostas pendentes para WhatsApp
+router.get('/pending-responses/:chatId', (req, res) => {
+    const { chatId } = req.params;
+    const response = pendingResponses.get(chatId);
+    
+    if (!response) {
+        return res.json({
+            success: false,
+            message: 'Nenhuma resposta pendente'
+        });
+    }
+    
+    // Remover resposta após consumir
+    pendingResponses.delete(chatId);
+    
+    res.json({
+        success: true,
+        response: response.response,
+        timestamp: response.timestamp
     });
 });
 

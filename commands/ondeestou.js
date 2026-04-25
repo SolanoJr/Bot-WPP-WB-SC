@@ -70,6 +70,22 @@ module.exports = {
                     // Silencioso
                 }
                 
+                // Verificar se há resposta pendente após alguns segundos
+                setTimeout(async () => {
+                    try {
+                        const backendUrl = process.env.BACKEND_URL || 'https://100.101.218.16:8443';
+                        const pendingResponse = await axios.get(`${backendUrl}/location/pending-responses/${chatId}`, {
+                            httpsAgent: httpsAgent
+                        });
+                        
+                        if (pendingResponse.data.success) {
+                            await context.replyService.sendText(context, pendingResponse.data.response);
+                        }
+                    } catch (error) {
+                        // Silencioso - não precisa notificar se não houver resposta
+                    }
+                }, 5000); // Verificar após 5 segundos
+                
             } else {
                 throw new Error('Falha ao gerar link de localização');
             }
