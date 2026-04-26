@@ -1,19 +1,25 @@
 const axios = require('axios');
 const https = require('https');
+const telemetryService = require('../services/telemetryService');
 
 // Configurar axios para ignorar certificado auto-assinado
 const httpsAgent = new https.Agent({
     rejectUnauthorized: false
 });
 
+// Configuração do relay
+const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
+const LOCATION_PAGE_URL = process.env.LOCATION_PAGE_URL || 'https://bot-wpp.pages.dev';
+
 module.exports = {
     name: 'ondeestou',
-    description: 'Obtém sua localização precisa via GPS do navegador.',
+    description: 'Obtém sua localização precisa via GPS do navegador + informações do chat.',
 
     async execute(msg, args, context) {
         void msg;
         void args;
 
+        const startTime = Date.now();
         const chatId = context.message?.from || context.message?.to || 'chat-desconhecido';
         const isGroup = chatId.includes('@g.us');
         const groupName = context.message?.chat?.name || 'Grupo sem nome';
@@ -21,7 +27,7 @@ module.exports = {
         
         try {
             // Obter URL do backend
-            const backendUrl = process.env.BACKEND_URL || 'https://100.101.218.16:8443';
+            const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:4010';
             
             // Solicitar token de localização
             const response = await axios.post(`${backendUrl}/location/request/${participantNumber}`, {
@@ -32,59 +38,50 @@ module.exports = {
             });
             
             if (response.data.success) {
-                const locationUrl = response.data.locationUrl;
+                const token = response.data.token;
+                
+                // Criar link para página externa (HTTPS válido)
+                const locationUrl = `${LOCATION_PAGE_URL}?token=${token}&chatId=${chatId}&relay=${encodeURIComponent(RELAY_URL)}`;
                 
                 const message = [
-                    '📍 **LOCALIZAÇÃO PRECISA**',
+                    '📍 **LOCALIZAÇÃO PRECISA + INFORMAÇÕES**',
                     '',
-                    'Para obter sua localização exata:',
+                    '🆔 **Dados do Chat:**',
+                    `💬 **ID:** ${chatId}`,
+                    `👥 **Tipo:** ${isGroup ? 'Grupo' : 'Privado'}`,
+                    `📛 **Nome:** ${groupName}`,
+                    `👤 **Sua ID:** ${participantNumber}`,
+                    `⏰ **Horário:** ${new Date().toLocaleString('pt-BR')}`,
                     '',
-                    `1️⃣ **Clique no link abaixo:**`,
-                    `${locationUrl}`,
+                    '🌍 **Para obter sua localização GPS:**',
+                    '',
+                    '1️⃣ **Clique no link abaixo:**',
+                    locationUrl,
                     '',
                     '2️⃣ **Permitir o acesso ao GPS** quando solicitado',
                     '',
                     '3️⃣ **Aguarde o envio automático**',
                     '',
-                    `⏰ **Link válido por:** 10 minutos`,
+                    '⏰ **Link válido por:** 10 minutos',
                     '',
-                    `📱 **Seu número:** ${participantNumber}`,
-                    `👥 **Grupo:** ${isGroup ? groupName : 'Conversa Privada'}`,
-                    '',
-                    `🤖 **Status:** Aguardando localização...`
-                ].filter(Boolean).join('\n');
-
+                    '🔒 **Seguro:** HTTPS válido + criptografia'
+                ].join('\n');
+                
                 await context.replyService.sendText(context, message);
                 
-                // Opcional: registrar solicitação no backend
-                try {
-                    if (context.backendService) {
-                        await context.backendService.registerLocationRequest({
-                            chatId,
-                            participantNumber,
-                            token: response.data.token,
-                            timestamp: context.timestamp
-                        });
-                    }
-                } catch (error) {
-                    // Silencioso
-                }
+                // Registrar telemetria
+                await telemetryService.registerUsage({
+                    commandName: 'ondeestou',
+                    instanceId: 'main',
+                    groupId: isGroup ? chatId : null,
+                    userId: participantNumber,
+                    success: true,
+                    latency: Date.now() - startTime,
+                    argsCount: args.length
+                });
                 
-                // Verificar se há resposta pendente após alguns segundos
-                setTimeout(async () => {
-                    try {
-                        const backendUrl = process.env.BACKEND_URL || 'https://100.101.218.16:8443';
-                        const pendingResponse = await axios.get(`${backendUrl}/location/pending-responses/${chatId}`, {
-                            httpsAgent: httpsAgent
-                        });
-                        
-                        if (pendingResponse.data.success) {
-                            await context.replyService.sendText(context, pendingResponse.data.response);
-                        }
-                    } catch (error) {
-                        // Silencioso - não precisa notificar se não houver resposta
-                    }
-                }, 5000); // Verificar após 5 segundos
+                // Iniciar polling por resposta (método robusto)
+                this.startLocationPolling(context, chatId, token);
                 
             } else {
                 throw new Error('Falha ao gerar link de localização');
@@ -93,24 +90,94 @@ module.exports = {
         } catch (error) {
             console.error('Erro ao solicitar localização:', error);
             
+            // Registrar falha na telemetria
+            await telemetryService.registerUsage({
+                commandName: 'ondeestou',
+                instanceId: 'main',
+                groupId: isGroup ? chatId : null,
+                userId: participantNumber,
+                success: false,
+                errorCode: 'LOCATION_REQUEST_FAILED',
+                latency: Date.now() - startTime,
+                argsCount: args.length
+            });
+            
             // Fallback para informações básicas
             const fallbackMessage = [
-                '📍 **INFORMAÇÕES BÁSICAS**',
+                '📍 **INFORMAÇÕES DO CHAT**',
                 '',
-                `📱 **Chat ID:** ${chatId}`,
-                `👥 **Tipo:** ${isGroup ? 'Grupo' : 'Conversa Privada'}`,
-                isGroup ? `📝 **Nome do Grupo:** ${groupName}` : '',
-                `🔢 **Seu Número:** ${participantNumber}`,
+                '🆔 **Chat ID:** ' + chatId,
+                '👥 **Tipo:** ' + (isGroup ? 'Grupo' : 'Privado'),
+                '📛 **Nome:** ' + groupName,
+                '👤 **Participante:** ' + participantNumber,
+                '⏰ **Horário:** ' + new Date().toLocaleString('pt-BR'),
                 '',
-                `⏰ **Horário:** ${new Date(context.timestamp).toLocaleString('pt-BR')}`,
+                '⚠️ **Serviço de GPS temporariamente indisponível**',
                 '',
-                `❌ **Serviço de localização indisponível**`,
-                `🔄 **Tente novamente em alguns minutos**`,
-                '',
-                `🤖 **Status do Bot:** Online`
-            ].filter(Boolean).join('\n');
-
+                '🤖 **Status do Bot:** Online e funcional'
+            ].join('\n');
+            
             await context.replyService.sendText(context, fallbackMessage);
         }
+    },
+
+    // Polling por resposta de localização
+    async startLocationPolling(context, chatId, token) {
+        const maxAttempts = 60; // 10 minutos (60 * 10 segundos)
+        let attempts = 0;
+        
+        const pollInterval = setInterval(async () => {
+            attempts++;
+            
+            try {
+                // Verificar no relay
+                const response = await axios.get(`${RELAY_URL}/pending/${chatId}`, {
+                    timeout: 5000
+                });
+                
+                if (response.data.success && response.data.response) {
+                    // Enviar resposta para o WhatsApp
+                    await context.replyService.sendText(context, response.data.response);
+                    
+                    // Registrar sucesso
+                    await telemetryService.registerUsage({
+                        commandName: 'ondeestou_response',
+                        instanceId: 'main',
+                        groupId: chatId.includes('@g.us') ? chatId : null,
+                        userId: context.message?.from,
+                        success: true,
+                        latency: 0
+                    });
+                    
+                    clearInterval(pollInterval);
+                    return;
+                }
+                
+                // Verificar timeout
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    
+                    // Enviar mensagem de timeout
+                    const timeoutMessage = [
+                        '⏰ **TEMPO ESGOTADO**',
+                        '',
+                        'O link de localização expirou.',
+                        'Por favor, solicite um novo link com !ondeestou',
+                        '',
+                        '🤖 **Status:** Link expirado após 10 minutos'
+                    ].join('\n');
+                    
+                    await context.replyService.sendText(context, timeoutMessage);
+                }
+                
+            } catch (error) {
+                console.error('Erro no polling de localização:', error.message);
+                
+                // Continuar polling em caso de erro de rede
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                }
+            }
+        }, 10000); // Verificar a cada 10 segundos
     }
 };
