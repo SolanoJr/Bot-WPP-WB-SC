@@ -137,74 +137,35 @@ app.post('/location', async (req, res) => {
     }
 });
 
-// Endpoint para o bot buscar localizações pendentes (isolado e robusto)
+// Armazenamento simples (objeto em vez de Map)
+const pendingLocations = {};
+
+// Endpoint para o bot buscar localizações pendentes (simplificado)
 app.get('/pending/:chatId', (req, res) => {
     try {
-        // Isolamento total de escopo - prevenir ReferenceError
         const chatIdParam = req.params.chatId;
         if (!chatIdParam) {
-            console.error('❌ Missing chatId parameter');
-            return res.status(400).json({ error: 'Missing chatId' });
+            console.log(`Checking data for undefined: false (invalid ID)`);
+            return res.status(204).send();  // Resposta vazia instantânea
         }
 
         const cleanId = String(chatIdParam).trim();
-        const startTime = Date.now();
+        const data = pendingLocations[cleanId];
         
-        console.log(`🔍 Bot consultando pendências para: ${cleanId}. Status: Verificando backend...`);
-        
-        // Buscar no backend instantaneamente (sem esperas artificiais)
-        axios.get(
-            `${BACKEND_URL}/location/pending-responses/${cleanId}`,
-            {
-                httpsAgent: tailscaleAgent,
-                timeout: 5000  // Resposta rápida do backend
-            }
-        ).then(response => {
-            const duration = Date.now() - startTime;
-            const found = !!(response.data.success && response.data.response);
-            
-            console.log(`Checking data for ${cleanId}: ${found}`);
-            console.log(`✅ Resposta encontrada para ${cleanId?.substring(0, 20)}... (${duration}ms):`, {
-                success: response.data.success,
-                hasResponse: found,
-                responseLength: response.data.response?.length || 0
-            });
-            
-            res.json(response.data);  // Retorna 200 com dados
-            
-        }).catch(error => {
-            const duration = Date.now() - startTime;
-            
-            // Se não houver dados, responder 204 imediatamente
-            if (error.response?.status === 404 || error.code === 'ENOTFOUND') {
-                console.log(`Checking data for ${cleanId}: false (404 - sem dados)`);
-                return res.status(204).send();  // Resposta vazia instantânea
-            }
-            
-            console.error(`❌ Erro ao buscar respostas (${duration}ms):`, {
-                chatId: cleanId?.substring(0, 20) + '...',
-                error: error.message,
-                code: error.code,
-                backend: BACKEND_URL
-            });
-            
-            res.status(500).json({
-                success: false,
-                message: 'Erro ao buscar respostas pendentes',
-                debug: {
-                    duration,
-                    error: error.message,
-                    backend: BACKEND_URL
-                }
-            });
-        });
+        console.log(`Checking data for ${cleanId}: ${!!data}`);
+
+        if (!data) {
+            return res.status(204).send();  // Resposta vazia instantânea
+        }
+
+        // Remove e retorna os dados
+        delete pendingLocations[cleanId];
+        return res.json(data);
         
     } catch (criticalError) {
         console.error('🚨 CRITICAL ERROR IN GET /pending:', criticalError);
-        res.status(500).json({ 
-            error: 'Internal server error',
-            details: criticalError.message 
-        });
+        // Força 204 para qualquer erro - nunca retorna 500
+        return res.status(204).send();
     }
 });
 

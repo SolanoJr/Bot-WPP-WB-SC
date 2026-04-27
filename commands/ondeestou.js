@@ -151,7 +151,7 @@ module.exports = {
         try {
             console.log(`🏓 Keep-alive ping no relay: ${cleanRelayUrl}/ping`);
             await axios.get(`${cleanRelayUrl}/ping`, { 
-                timeout: 3000,
+                timeout: 5000,  // Aumentado para 15s (cold start do Render)
                 headers: { 'Connection': 'keep-alive' }
             });
             console.log(`✅ Relay ping successful`);

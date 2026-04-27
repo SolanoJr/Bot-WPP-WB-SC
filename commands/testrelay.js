@@ -111,12 +111,8 @@ module.exports = {
                 '🤖 **Status:** Teste finalizado'
             ].join('\n');
             
-            // Usar client.sendMessage direto
-            if (context.message && context.message.from) {
-                await globalClient.sendMessage(context.message.from, testMessage);
-            } else {
-                await context.replyService.sendText(context, testMessage);
-            }
+            // Usar message.reply() padrão do whatsapp-web.js
+            await context.message.reply(testMessage);
             
         } catch (error) {
             console.error('❌ Erro geral no teste do Relay:', error);
@@ -130,12 +126,8 @@ module.exports = {
                 `🤖 **Erro:** ${error.message}`
             ].join('\n');
             
-            // Usar client.sendMessage direto
-            if (context.message && context.message.from) {
-                await globalClient.sendMessage(context.message.from, errorMessage);
-            } else {
-                console.error('❌ Contexto inválido no testrelay:', context);
-            }
+            // Usar message.reply() padrão do whatsapp-web.js
+            await context.message.reply(errorMessage);
         }
     }
 };
