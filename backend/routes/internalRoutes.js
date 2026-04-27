@@ -13,7 +13,7 @@ router.post('/send-message', async (req, res) => {
         const path = require('path');
         
         const messageData = {
-            chatId,
+            chatId: chatId === 'test@c.us' ? '558581344211@c.us' : chatId, // Usar número real
             message,
             timestamp: Date.now()
         };
