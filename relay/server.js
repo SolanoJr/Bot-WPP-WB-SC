@@ -40,12 +40,13 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Receber localização do frontend
+// Receber localização do frontend (isolado e robusto)
 app.post('/location', async (req, res) => {
-    // Forçar timeout da resposta para 10s
-    req.setTimeout(10000);
-    
-    const { token, chatId, location, userAgent, timestamp } = req.body;
+    try {
+        // Forçar timeout da resposta para 10s
+        req.setTimeout(10000);
+        
+        const { token, chatId, location, userAgent, timestamp } = req.body;
     
     console.log('📥 Localização recebida para o chatId:', chatId);
     console.log('📍 Recebendo localização COMPLETA:', {
@@ -126,18 +127,31 @@ app.post('/location', async (req, res) => {
                 message: 'Erro ao processar localização'
             });
         }
+        
+    } catch (criticalError) {
+        console.error('🚨 CRITICAL ERROR IN POST /location:', criticalError);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: criticalError.message 
+        });
     }
 });
 
-// Endpoint para o bot buscar localizações pendentes (puramente reativo)
+// Endpoint para o bot buscar localizações pendentes (isolado e robusto)
 app.get('/pending/:chatId', (req, res) => {
-    const { chatId } = req.params;  // Primeiro extrai
-    const cleanId = String(chatId).trim();  // Depois limpa
-    const startTime = Date.now();
-    
-    console.log(`🔍 Bot consultando pendências para: ${cleanId}. Status: Verificando backend...`);
-    
     try {
+        // Isolamento total de escopo - prevenir ReferenceError
+        const chatIdParam = req.params.chatId;
+        if (!chatIdParam) {
+            console.error('❌ Missing chatId parameter');
+            return res.status(400).json({ error: 'Missing chatId' });
+        }
+
+        const cleanId = String(chatIdParam).trim();
+        const startTime = Date.now();
+        
+        console.log(`🔍 Bot consultando pendências para: ${cleanId}. Status: Verificando backend...`);
+        
         // Buscar no backend instantaneamente (sem esperas artificiais)
         axios.get(
             `${BACKEND_URL}/location/pending-responses/${cleanId}`,
@@ -184,6 +198,14 @@ app.get('/pending/:chatId', (req, res) => {
                 }
             });
         });
+        
+    } catch (criticalError) {
+        console.error('🚨 CRITICAL ERROR IN GET /pending:', criticalError);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: criticalError.message 
+        });
+    }
 });
 
 // Status geral do relay

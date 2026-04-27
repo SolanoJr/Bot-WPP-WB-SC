@@ -131,7 +131,7 @@ module.exports = {
             if (context.message && context.message.from) {
                 await globalClient.sendMessage(context.message.from, errorMessage);
             } else {
-                await context.replyService.sendText(context, errorMessage);
+                console.error('❌ Contexto inválido no testrelay:', context);
             }
         }
     }
