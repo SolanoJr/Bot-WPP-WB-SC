@@ -108,7 +108,12 @@ module.exports = {
                 '🤖 **Status:** Teste finalizado'
             ].join('\n');
             
-            await context.replyService.sendText(context, testMessage);
+            // Usar client.sendMessage direto
+            if (context.message && context.message.from) {
+                await globalClient.sendMessage(context.message.from, testMessage);
+            } else {
+                await context.replyService.sendText(context, testMessage);
+            }
             
         } catch (error) {
             console.error('❌ Erro geral no teste do Relay:', error);
@@ -122,7 +127,12 @@ module.exports = {
                 `🤖 **Erro:** ${error.message}`
             ].join('\n');
             
-            await context.replyService.sendText(context, errorMessage);
+            // Usar client.sendMessage direto
+            if (context.message && context.message.from) {
+                await globalClient.sendMessage(context.message.from, errorMessage);
+            } else {
+                await context.replyService.sendText(context, errorMessage);
+            }
         }
     }
 };

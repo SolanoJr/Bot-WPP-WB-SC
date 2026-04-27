@@ -129,31 +129,31 @@ app.post('/location', async (req, res) => {
     }
 });
 
-// Endpoint para o bot buscar localizações pendentes (polling)
+// Endpoint para o bot buscar localizações pendentes (polling rápido)
 app.get('/pending/:chatId', async (req, res) => {
-    // Forçar timeout da resposta para 10s
-    req.setTimeout(10000);
-    
+    const cleanId = String(chatId).trim();  // Garantir chatId não alterado
     const { chatId } = req.params;
     const startTime = Date.now();
     
-    console.log(`🔍 Bot consultando pendências para: ${chatId}. Status: Verificando backend...`);
-    console.log(`🔍 Buscando resposta pendente para chatId: ${chatId?.substring(0, 20)}...`);
+    console.log(`🔍 Bot consultando pendências para: ${cleanId}. Status: Verificando backend...`);
     
     try {
-        // Buscar no backend com timeout aumentado
+        // Buscar no backend instantaneamente (sem espera)
         const response = await axios.get(
-            `${BACKEND_URL}/location/pending-responses/${chatId}`,
+            `${BACKEND_URL}/location/pending-responses/${cleanId}`,
             {
                 httpsAgent: tailscaleAgent,
-                timeout: 15000  // Aumentado de 5000ms para 15000ms
+                timeout: 5000  // Reduzido para resposta rápida
             }
         );
         
         const duration = Date.now() - startTime;
-        console.log(`✅ Resposta encontrada para ${chatId?.substring(0, 20)}... (${duration}ms):`, {
+        const found = !!(response.data.success && response.data.response);
+        
+        console.log(`Checking data for ${cleanId}: ${found}`);
+        console.log(`✅ Resposta encontrada para ${cleanId?.substring(0, 20)}... (${duration}ms):`, {
             success: response.data.success,
-            hasResponse: !!response.data.response,
+            hasResponse: found,
             responseLength: response.data.response?.length || 0
         });
         
@@ -161,6 +161,14 @@ app.get('/pending/:chatId', async (req, res) => {
         
     } catch (error) {
         const duration = Date.now() - startTime;
+        
+        // Se não houver dados, responder 204 imediatamente (polling rápido)
+        if (error.response?.status === 404 || error.code === 'ENOTFOUND') {
+            console.log(`Checking data for ${cleanId}: false (404 - sem dados)`);
+            res.status(204).end();  // Resposta vazia instantânea
+            return;
+        }
+        
         console.error(`❌ Erro ao buscar respostas pendentes (${duration}ms):`, {
             chatId: chatId?.substring(0, 20) + '...',
             error: error.message,
@@ -168,9 +176,9 @@ app.get('/pending/:chatId', async (req, res) => {
             backend: BACKEND_URL
         });
         
-        res.json({
+        res.status(500).json({
             success: false,
-            message: 'Nenhuma resposta pendente',
+            message: 'Erro ao buscar respostas pendentes',
             debug: {
                 duration,
                 error: error.message,

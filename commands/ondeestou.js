@@ -170,7 +170,7 @@ module.exports = {
                 console.log(`⏳ ANTES do axios.get para ${cleanRelayUrl}/pending/${chatId}`);
                 
                 const response = await axios.get(`${cleanRelayUrl}/pending/${chatId}`, {
-                    timeout: 10000,  // Aumentado para 10s
+                    timeout: 5000,  // Reduzido para 5s (polling rápido)
                     headers: { 'Connection': 'keep-alive' }
                 });
                 
@@ -179,15 +179,40 @@ module.exports = {
                 const duration = Date.now() - startTime;
                 realResponses++; // Conta resposta real do servidor
                 
+                // Tratar status 204 como "aguardando usuário"
+                if (response.status === 204) {
+                    console.log(`⏳ Status 204 - Ainda aguardando usuário enviar localização...`);
+                    
+                    // Continuar polling se não for última tentativa
+                    if (attempts < maxAttempts) {
+                        setTimeout(pollRecursive, 3000);
+                        return;
+                    }
+                    
+                    // Última tentativa sem resposta
+                    const timeoutMessage = [
+                        '⏰ **TEMPO ESGOTADO**',
+                        '',
+                        'O link de localização expirou.',
+                        'Por favor, solicite um novo link com !ondeestou',
+                        '',
+                        `🤖 **Status:** ${attempts} tentativas, ${realResponses} respostas`
+                    ].join('\n');
+                    
+                    await context.replyService.sendText(context, timeoutMessage);
+                    return;
+                }
+                
                 console.log(`📊 Polling response (${duration}ms):`, {
-                    success: response.data.success,
-                    hasResponse: !!response.data.response,
-                    responseLength: response.data.response?.length || 0,
+                    status: response.status,
+                    success: response.data?.success,
+                    hasResponse: !!response.data?.response,
+                    responseLength: response.data?.response?.length || 0,
                     realResponses,
                     attempts
                 });
                 
-                if (response.data.success && response.data.response) {
+                if (response.data?.success && response.data?.response) {
                     console.log(`✅ Encontrei resposta para ${chatId?.substring(0, 20)}..., enviando...`);
                     
                     try {
