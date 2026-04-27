@@ -11,6 +11,9 @@ const { isValidCommand } = require('./utils/validator');
 const COMMAND_PREFIX = '!';
 const DEFAULT_COMMANDS_DIR = path.join(__dirname, 'commands');
 
+// Client global para envio de mensagens pendentes
+let globalClient = null;
+
 const createCommandRegistry = () => new Map();
 
 const normalizeCommand = (command, commandPath) => {
@@ -157,6 +160,9 @@ const startBot = () => {
     const client = new Client({
         authStrategy: new LocalAuth()
     });
+    
+    // Atribuir client global
+    globalClient = client;
 
     client.on('qr', (qr) => {
         console.log('QR gerado');
@@ -196,14 +202,19 @@ const processPendingMessages = async () => {
         
         console.log(`📨 Processando ${pendingMessages.length} mensagens pendentes`);
         
-        // Enviar mensagens (precisa do client)
+        // Enviar mensagens usando client global
         for (const msg of pendingMessages) {
             try {
                 console.log(`📤 Enviando para ${msg.chatId}:`, msg.message.substring(0, 50) + '...');
-                // Aqui precisaria do client global para enviar
-                // await client.sendMessage(msg.chatId, msg.message);
+                
+                if (globalClient && globalClient.sendMessage) {
+                    await globalClient.sendMessage(msg.chatId, msg.message);
+                    console.log(`✅ Mensagem enviada para ${msg.chatId}`);
+                } else {
+                    console.error(`❌ Client não disponível para ${msg.chatId}`);
+                }
             } catch (error) {
-                console.error('❌ Erro ao enviar mensagem:', error);
+                console.error(`❌ Erro ao enviar mensagem para ${msg.chatId}:`, error);
             }
         }
         
