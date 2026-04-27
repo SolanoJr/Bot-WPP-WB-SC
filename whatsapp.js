@@ -14,6 +14,14 @@ const DEFAULT_COMMANDS_DIR = path.join(__dirname, 'commands');
 // Client global para envio de mensagens pendentes
 let globalClient = null;
 
+// Validar formato do chatId
+const validateChatId = (chatId) => {
+    // Formato esperado: 5511999998888@c.us (privado) ou 5511999998888-123456@g.us (grupo)
+    const privatePattern = /^\d{12,15}@c\.us$/;
+    const groupPattern = /^\d{12,15}-\d+@g\.us$/;
+    return privatePattern.test(chatId) || groupPattern.test(chatId);
+};
+
 const createCommandRegistry = () => new Map();
 
 const normalizeCommand = (command, commandPath) => {
@@ -206,15 +214,35 @@ const processPendingMessages = async () => {
         for (const msg of pendingMessages) {
             try {
                 console.log(`📤 Enviando para ${msg.chatId}:`, msg.message.substring(0, 50) + '...');
+                console.log(`🔍 Client state:`, globalClient ? 'EXISTS' : 'NULL');
+                console.log(`🔍 Client ready:`, globalClient?.info ? 'READY' : 'NOT READY');
+                console.log(`🔍 ChatId format:`, msg.chatId, '->', validateChatId(msg.chatId) ? 'VALID' : 'INVALID');
                 
-                if (globalClient && globalClient.sendMessage) {
-                    await globalClient.sendMessage(msg.chatId, msg.message);
-                    console.log(`✅ Mensagem enviada para ${msg.chatId}`);
-                } else {
-                    console.error(`❌ Client não disponível para ${msg.chatId}`);
+                if (!globalClient) {
+                    console.error(`❌ Client NULL para ${msg.chatId}`);
+                    continue;
                 }
+                
+                if (!globalClient.info) {
+                    console.error(`❌ Client NOT READY para ${msg.chatId}`);
+                    continue;
+                }
+                
+                if (!validateChatId(msg.chatId)) {
+                    console.error(`❌ ChatId INVALIDO: ${msg.chatId}`);
+                    continue;
+                }
+                
+                console.log(`⏳ Enviando mensagem real para ${msg.chatId}...`);
+                const result = await globalClient.sendMessage(msg.chatId, msg.message);
+                console.log(`✅ Mensagem enviada SUCESSO para ${msg.chatId}:`, result.id);
+                
             } catch (error) {
-                console.error(`❌ Erro ao enviar mensagem para ${msg.chatId}:`, error);
+                console.error(`❌ ERRO DETALHADO ao enviar para ${msg.chatId}:`);
+                console.error(`   - Mensagem:`, error.message);
+                console.error(`   - Stack:`, error.stack);
+                console.error(`   - Código:`, error.code);
+                console.error(`   - Tipo:`, error.constructor.name);
             }
         }
         
