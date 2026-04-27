@@ -33,12 +33,17 @@ app.get('/health', (req, res) => {
 app.post('/location', async (req, res) => {
     const { token, chatId, location, userAgent, timestamp } = req.body;
     
-    console.log('📍 Recebendo localização:', {
+    console.log('📍 Recebendo localização COMPLETA:', {
         token,
         chatId: chatId?.substring(0, 20) + '...',
-        location,
+        location: {
+            latitude: location?.latitude,
+            longitude: location?.longitude,
+            accuracy: location?.accuracy
+        },
         userAgent: userAgent?.substring(0, 50) + '...',
-        timestamp
+        timestamp,
+        bodyCompleto: req.body
     });
     
     // Validação básica

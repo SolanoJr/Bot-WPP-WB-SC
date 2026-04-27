@@ -30,6 +30,8 @@ module.exports = {
             const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:4010';
             
             // Solicitar token de localização
+            console.log(`⏳ ANTES do axios.post para ${backendUrl}/location/request/${participantNumber}`);
+            
             const response = await axios.post(`${backendUrl}/location/request/${participantNumber}`, {
                 chatId,
                 messageId: context.message?.id?.id || 'unknown'
@@ -37,11 +39,17 @@ module.exports = {
                 httpsAgent: httpsAgent
             });
             
+            console.log(`✅ DEPOIS do axios.post - token response recebida`);
+            
             if (response.data.success) {
                 const token = response.data.token;
                 
+                console.log(`🔑 Token gerado: ${token?.substring(0, 15)}... para chatId: ${chatId?.substring(0, 20)}...`);
+                
                 // Criar link para página externa (HTTPS válido)
                 const locationUrl = `${LOCATION_PAGE_URL}?token=${token}&chatId=${chatId}&relay=${encodeURIComponent(RELAY_URL)}`;
+                
+                console.log(`🔗 Link gerado: ${locationUrl?.substring(0, 100)}...`);
                 
                 const message = [
                     '📍 **LOCALIZAÇÃO PRECISA + INFORMAÇÕES**',
@@ -122,61 +130,50 @@ module.exports = {
         }
     },
 
-    // Polling por resposta de localização com retry inteligente
+    // Polling simples - sem complexidade
     async startLocationPolling(context, chatId, token) {
-        const maxAttempts = 60; // 10 minutos (60 * 10 segundos)
+        const maxAttempts = 10; // 30 segundos totais (10 * 3s)
         let attempts = 0;
-        let consecutiveSuccess = 0; // Para retry inteligente
-        let lastResponseTime = 0;
         
-        // Rate-limit real com variável estática (global para todas as instâncias)
-        if (!this.constructor._lastPollingErrorLog) {
-            this.constructor._lastPollingErrorLog = 0;
-        }
-        
-        // Mapear chatId para chave estável (lid -> c.us se necessário)
-        const stableChatId = chatId.includes('@lid') ? 
-            context.message?.from || chatId : 
-            chatId;
-        
-        console.log(`🔄 Iniciando polling inteligente:`, {
-            originalChatId: chatId?.substring(0, 20) + '...',
-            stableChatId: stableChatId?.substring(0, 20) + '...',
+        console.log(`🔄 Iniciando polling SIMPLES:`, {
+            chatId: chatId?.substring(0, 20) + '...',
             token: token?.substring(0, 10) + '...',
-            relay: RELAY_URL
+            relay: RELAY_URL,
+            maxAttempts
         });
         
         const pollInterval = setInterval(async () => {
             attempts++;
             const startTime = Date.now();
             
+            console.log(`🔍 Polling attempt ${attempts}/${maxAttempts} para ${chatId?.substring(0, 20)}...`);
+            
             try {
-                // Retry inteligente: se teve sucesso rápido, reduzir intervalo
-                const adaptiveInterval = consecutiveSuccess >= 3 ? 5000 : 10000;
+                console.log(`⏳ ANTES do axios.get para ${RELAY_URL}/pending/${chatId}`);
                 
-                console.log(`🔍 Polling attempt ${attempts}/${maxAttempts} para ${stableChatId?.substring(0, 20)}... (intervalo: ${adaptiveInterval}ms)`);
+                const response = await axios.get(`${RELAY_URL}/pending/${chatId}`, {
+                    timeout: 15000
+                });
                 
-                // Verificar no relay com timeout aumentado e retry
-                const response = await this.pollWithRetry(`${RELAY_URL}/pending/${chatId}`, 2, 5000);
+                console.log(`✅ DEPOIS do axios.get - response recebida`);
                 
                 const duration = Date.now() - startTime;
-                lastResponseTime = Date.now();
                 
                 console.log(`📊 Polling response (${duration}ms):`, {
                     success: response.data.success,
                     hasResponse: !!response.data.response,
-                    responseLength: response.data.response?.length || 0,
-                    debug: response.data.debug,
-                    attempts
+                    responseLength: response.data.response?.length || 0
                 });
                 
                 if (response.data.success && response.data.response) {
-                    console.log(`✅ Encontrei resposta para ${stableChatId?.substring(0, 20)}..., enviando...`);
+                    console.log(`✅ Encontrei resposta para ${chatId?.substring(0, 20)}..., enviando...`);
                     
                     try {
-                        // Enviar resposta para o WhatsApp com logs detalhados
+                        console.log(`⏳ ANTES do replyService.sendText`);
+                        
                         await context.replyService.sendText(context, response.data.response);
-                        console.log(`✅ Resposta enviada com sucesso para ${stableChatId?.substring(0, 20)}...`);
+                        
+                        console.log(`✅ DEPOIS do replyService.sendText - enviado com sucesso`);
                         
                         // Registrar sucesso
                         await telemetryService.registerUsage({
@@ -194,35 +191,28 @@ module.exports = {
                         
                     } catch (sendError) {
                         console.error(`❌ Erro ao enviar resposta para WhatsApp:`, sendError.message);
+                        console.log(`🔄 Falha no envio, continuando polling...`);
                         
-                        // Retry inteligente: se falhar no envio, continuar polling
-                        if (attempts < maxAttempts) {
-                            console.log(`🔄 Falha no envio, continuando polling...`);
-                            return;
+                        if (attempts >= maxAttempts) {
+                            clearInterval(pollInterval);
+                            console.log(`🛑 Polling finalizado após max attempts com falha de envio`);
                         }
+                        return;
                     }
-                }
-                
-                // Retry inteligente: incrementar success consecutivo se resposta rápida
-                if (duration < 3000) {
-                    consecutiveSuccess++;
-                } else {
-                    consecutiveSuccess = 0;
                 }
                 
                 // Verificar timeout
                 if (attempts >= maxAttempts) {
                     clearInterval(pollInterval);
-                    console.log(`⏰ Polling timeout para ${stableChatId?.substring(0, 20)}... após ${maxAttempts} tentativas`);
+                    console.log(`⏰ Polling timeout para ${chatId?.substring(0, 20)}... após ${maxAttempts} tentativas`);
                     
-                    // Enviar mensagem de timeout com debug
                     const timeoutMessage = [
                         '⏰ **TEMPO ESGOTADO**',
                         '',
                         'O link de localização expirou.',
                         'Por favor, solicite um novo link com !ondeestou',
                         '',
-                        `🤖 **Status:** ${attempts} tentativas em ${Math.round((Date.now() - lastResponseTime) / 1000)}s`
+                        `🤖 **Status:** ${attempts} tentativas`
                     ].join('\n');
                     
                     await context.replyService.sendText(context, timeoutMessage);
@@ -231,51 +221,19 @@ module.exports = {
             } catch (error) {
                 const duration = Date.now() - startTime;
                 
-                // Rate-limit real para logs de erro (1x por minuto global)
-                const now = Date.now();
-                const lastLogTime = this.constructor._lastPollingErrorLog;
-                const logInterval = 60000; // 1 minuto
+                console.error(`❌ Erro no polling (${duration}ms):`, {
+                    chatId: chatId?.substring(0, 20) + '...',
+                    attempt: `${attempts}/${maxAttempts}`,
+                    error: error.message,
+                    code: error.code,
+                    relay: RELAY_URL
+                });
                 
-                if (now - lastLogTime > logInterval) {
-                    console.error(`❌ Erro no polling (${duration}ms):`, {
-                        chatId: stableChatId?.substring(0, 20) + '...',
-                        attempt: `${attempts}/${maxAttempts}`,
-                        error: error.message,
-                        code: error.code,
-                        relay: RELAY_URL,
-                        consecutiveSuccess
-                    });
-                    this.constructor._lastPollingErrorLog = now;
-                    
-                    // Reset consecutive success em erro
-                    consecutiveSuccess = 0;
-                }
-                
-                // Continuar polling em caso de erro de rede
                 if (attempts >= maxAttempts) {
                     clearInterval(pollInterval);
-                    console.log(`🛑 Polling finalizado para ${stableChatId?.substring(0, 20)}... após max attempts`);
+                    console.log(`🛑 Polling finalizado para ${chatId?.substring(0, 20)}... após max attempts`);
                 }
             }
-        }, 10000); // Base interval, ajustado dinamicamente
-    }
-    
-    // Helper para retry com backoff
-    async pollWithRetry(url, maxRetries = 2, baseDelay = 1000) {
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                const response = await axios.get(url, { timeout: 15000 });
-                return response;
-            } catch (error) {
-                if (attempt === maxRetries) {
-                    throw error;
-                }
-                
-                // Backoff exponencial
-                const delay = baseDelay * Math.pow(2, attempt - 1);
-                console.log(`🔄 Retry ${attempt}/${maxRetries} em ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
-        }
+        }, 3000); // Polling simples a cada 3 segundos
     }
 };
