@@ -131,8 +131,8 @@ app.post('/location', async (req, res) => {
 
 // Endpoint para o bot buscar localizações pendentes (polling rápido)
 app.get('/pending/:chatId', async (req, res) => {
-    const cleanId = String(chatId).trim();  // Garantir chatId não alterado
-    const { chatId } = req.params;
+    const { chatId } = req.params;  // Primeiro extrai
+    const cleanId = String(chatId).trim();  // Depois limpa
     const startTime = Date.now();
     
     console.log(`🔍 Bot consultando pendências para: ${cleanId}. Status: Verificando backend...`);
