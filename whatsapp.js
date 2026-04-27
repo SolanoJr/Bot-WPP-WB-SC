@@ -224,8 +224,11 @@ const startBot = () => {
         console.log('🤖 Bot WhatsApp ready!');
         console.log('📱 Client State:', client.info);
         
-        // Processar mensagens pendentes
+        // Processar mensagens pendentes imediatamente
         processPendingMessages();
+        
+        // Agendar processamento contínuo (a cada 10 segundos)
+        setInterval(processPendingMessages, 10000);
     });
 
     client.on('message_create', createMessageHandler({ client, commands }));

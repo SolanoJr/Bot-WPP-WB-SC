@@ -80,9 +80,10 @@ module.exports = {
                     argsCount: args.length
                 });
                 
-                // TEMPORÁRIO: Desativar polling para evitar loop infinito
+                // HOTFIX: Desativar polling completamente para parar spam de timeout
                 // this.startLocationPolling(context, chatId, token);
-                console.log('⚠️ Polling de localização temporariamente desativado para evitar sobrecarga');
+                console.log('🚨 POLLING DESATIVADO - Link gerado mas sem verificação automática');
+                console.log('📝 Usuário deve enviar manualmente: !status ou !ajuda');
                 
             } else {
                 throw new Error('Falha ao gerar link de localização');
