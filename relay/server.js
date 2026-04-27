@@ -40,99 +40,33 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Receber localização do frontend (isolado e robusto)
+// Receber localização do frontend (ultra-minimalista)
 app.post('/location', async (req, res) => {
     try {
-        // Forçar timeout da resposta para 10s
-        req.setTimeout(10000);
-        
         const { token, chatId, location, userAgent, timestamp } = req.body;
-    
-    console.log('📥 Localização recebida para o chatId:', chatId);
-    console.log('📍 Recebendo localização COMPLETA:', {
-        token,
-        chatId: chatId?.substring(0, 20) + '...',
-        location: {
-            latitude: location?.latitude,
-            longitude: location?.longitude,
-            accuracy: location?.accuracy
-        },
-        userAgent: userAgent?.substring(0, 50) + '...',
-        timestamp,
-        bodyCompleto: req.body
-    });
-    
-    // Validação básica
-    if (!token || !chatId || !location) {
-        return res.status(400).json({
-            success: false,
-            message: 'Dados incompletos'
-        });
-    }
-    
-    if (!location.latitude || !location.longitude) {
-        return res.status(400).json({
-            success: false,
-            message: 'Coordenadas inválidas'
-        });
-    }
-    
-    try {
-        // Enviar para backend via Tailscale
-        const backendResponse = await axios.post(
-            `${BACKEND_URL}/location/submit/${token}`,
-            {
-                chatId,
-                location,
-                userAgent,
-                timestamp,
-                source: 'relay'
-            },
-            {
-                httpsAgent: tailscaleAgent,
-                timeout: 10000,
-                headers: {
-                    'X-Relay-Auth': process.env.RELAY_AUTH || 'default'
-                }
-            }
-        );
         
-        console.log('✅ Localização enviada para backend:', backendResponse.data);
+        console.log('📥 Localização recebida para o chatId:', chatId);
+        
+        // Salvar localização para polling
+        pendingLocations[chatId] = {
+            token,
+            chatId,
+            location,
+            userAgent,
+            timestamp,
+            receivedAt: new Date().toISOString()
+        };
         
         res.json({
             success: true,
-            message: 'Localização recebida e processada',
-            backendResponse: backendResponse.data
+            message: 'Localização recebida e armazenada'
         });
         
     } catch (error) {
-        console.error('❌ Erro ao enviar para backend:', error.message);
-        
-        // Tentar método alternativo: salvar localmente para polling
-        try {
-            // Aqui poderia salvar em Redis/DB para o bot buscar depois
-            console.log('🔄 Tentando método alternativo...');
-            
-            res.json({
-                success: true,
-                message: 'Localização recebida (processamento assíncrono)',
-                method: 'polling'
-            });
-            
-        } catch (fallbackError) {
-            console.error('❌ Erro no fallback:', fallbackError);
-            
-            res.status(500).json({
-                success: false,
-                message: 'Erro ao processar localização'
-            });
-        }
-        
-    } catch (criticalError) {
-        console.error('🚨 CRITICAL ERROR IN POST /location:', criticalError);
-        res.status(500).json({ 
-            error: 'Internal server error',
-            details: criticalError.message 
+        console.error('❌ Erro ao processar localização:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao processar localização'
         });
     }
 });
