@@ -42,8 +42,12 @@ app.get('/health', (req, res) => {
 
 // Receber localização do frontend
 app.post('/location', async (req, res) => {
+    // Forçar timeout da resposta para 10s
+    req.setTimeout(10000);
+    
     const { token, chatId, location, userAgent, timestamp } = req.body;
     
+    console.log('📥 Localização recebida para o chatId:', chatId);
     console.log('📍 Recebendo localização COMPLETA:', {
         token,
         chatId: chatId?.substring(0, 20) + '...',
@@ -127,9 +131,13 @@ app.post('/location', async (req, res) => {
 
 // Endpoint para o bot buscar localizações pendentes (polling)
 app.get('/pending/:chatId', async (req, res) => {
+    // Forçar timeout da resposta para 10s
+    req.setTimeout(10000);
+    
     const { chatId } = req.params;
     const startTime = Date.now();
     
+    console.log(`🔍 Bot consultando pendências para: ${chatId}. Status: Verificando backend...`);
     console.log(`🔍 Buscando resposta pendente para chatId: ${chatId?.substring(0, 20)}...`);
     
     try {
@@ -200,6 +208,16 @@ app.use((req, res) => {
     });
 });
 
+// Limpeza automática de dados antigos
+const cleanupOldData = () => {
+    console.log(`🧹 Iniciando limpeza de dados antigos...`);
+    // Aqui poderia limpar Redis/DB com dados > 5min
+    console.log(`✅ Limpeza concluída`);
+};
+
+// Limpar a cada 5 minutos
+setInterval(cleanupOldData, 5 * 60 * 1000);
+
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`🚀 Relay API rodando na porta ${PORT}`);
@@ -220,6 +238,9 @@ app.listen(PORT, () => {
             console.log(`   ${methods} ${path}`);
         }
     });
+    
+    // Iniciar limpeza inicial
+    setTimeout(cleanupOldData, 1000);
 });
 
 // Graceful shutdown

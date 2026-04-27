@@ -170,7 +170,7 @@ module.exports = {
                 console.log(`⏳ ANTES do axios.get para ${cleanRelayUrl}/pending/${chatId}`);
                 
                 const response = await axios.get(`${cleanRelayUrl}/pending/${chatId}`, {
-                    timeout: 5000,  // Baixado de 15s para 5s
+                    timeout: 10000,  // Aumentado para 10s
                     headers: { 'Connection': 'keep-alive' }
                 });
                 
@@ -270,13 +270,24 @@ module.exports = {
                     }
                 }
                 
+                // Modo verboso: status code exato
+                const statusCode = error.response?.status || 'N/A';
+                const isTimeout = error.code === 'ECONNABORTED';
+                
                 console.error(`❌ Erro no polling (${duration}ms):`, {
                     chatId: chatId?.substring(0, 20) + '...',
                     attempt: `${attempts}/${maxAttempts}`,
                     error: error.message,
                     code: error.code,
+                    statusCode: statusCode,
+                    isTimeout: isTimeout,
                     relay: cleanRelayUrl
                 });
+                
+                // Se não for timeout, log adicional
+                if (!isTimeout && statusCode !== 'N/A') {
+                    console.error(`🚨 Status HTTP inesperado: ${statusCode} - ${error.response?.statusText || 'Sem texto'}`);
+                }
                 
                 // Continuar polling se houver erro de rede
                 if (attempts < maxAttempts) {
