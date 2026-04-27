@@ -130,9 +130,9 @@ module.exports = {
             attempts++;
             
             try {
-                // Verificar no relay
+                // Verificar no relay (timeout aumentado para 15s)
                 const response = await axios.get(`${RELAY_URL}/pending/${chatId}`, {
-                    timeout: 5000
+                    timeout: 15000
                 });
                 
                 if (response.data.success && response.data.response) {
@@ -171,7 +171,28 @@ module.exports = {
                 }
                 
             } catch (error) {
-                console.error('Erro no polling de localização:', error.message);
+                // Rate-limit para logs de erro (1x por minuto)
+                const now = Date.now();
+                const lastLogTime = this._lastPollingErrorLog || 0;
+                const logInterval = 60000; // 1 minuto
+                
+                if (now - lastLogTime > logInterval) {
+                    console.error('Erro no polling de localização:', error.message);
+                    this._lastPollingErrorLog = now;
+                    
+                    // Se for timeout, continuar tentando
+                    if (error.code === 'ECONNABORTED') {
+                        console.log(`Timeout no polling (${attempts}/${maxAttempts}) - continuando...`);
+                    }
+                    // Se for erro de rede, continuar tentando
+                    else if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND') {
+                        console.log(`Erro de rede no polling (${attempts}/${maxAttempts}) - continuando...`);
+                    }
+                    // Se for outro erro, logar completo
+                    else {
+                        console.error('Erro crítico no polling:', error);
+                    }
+                }
                 
                 // Continuar polling em caso de erro de rede
                 if (attempts >= maxAttempts) {
