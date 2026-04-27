@@ -8,42 +8,47 @@ router.post('/send-message', async (req, res) => {
     console.log('INTERNAL SEND MESSAGE:', { chatId, messageLength: message.length });
     
     try {
-        // Enviar via PM2 para o bot-wpp
-        const { exec } = require('child_process');
+        // Salvar mensagem para o bot WhatsApp ler
+        const fs = require('fs');
+        const path = require('path');
         
-        const script = `
-const client = require('whatsapp-web.js');
-const fs = require('fs');
-
-// Ler sessão do WhatsApp
-if (fs.existsSync('./.wwebjs_auth/session.json')) {
-    console.log('Enviando mensagem para WhatsApp:', '${chatId}');
-    
-    // Simular envio (implementação real precisaria do client)
-    console.log('Mensagem:', \`${message.replace(/\`/g, '\\`')}\`);
-    
-    process.exit(0);
-} else {
-    console.log('Sessão WhatsApp não encontrada');
-    process.exit(1);
-}
-`;
+        const messageData = {
+            chatId,
+            message,
+            timestamp: Date.now()
+        };
         
-        exec(`node -e "${script.replace(/"/g, '\\"')}"`, (error, stdout, stderr) => {
-            if (error) {
-                console.error('ERRO NO SCRIPT:', error);
-                return res.status(500).json({
-                    success: false,
-                    message: 'WhatsApp session not available'
-                });
+        const messageFile = path.join(__dirname, '../../.pending-messages.json');
+        
+        // Ler mensagens pendentes
+        let pendingMessages = [];
+        if (fs.existsSync(messageFile)) {
+            try {
+                pendingMessages = JSON.parse(fs.readFileSync(messageFile, 'utf8'));
+            } catch (e) {
+                pendingMessages = [];
             }
-            
-            console.log('MENSAGEM ENVIADA VIA PM2:', chatId);
-            
-            res.json({
-                success: true,
-                message: 'Message sent to WhatsApp via PM2'
-            });
+        }
+        
+        // Adicionar nova mensagem
+        pendingMessages.push(messageData);
+        
+        // Salvar arquivo
+        fs.writeFileSync(messageFile, JSON.stringify(pendingMessages, null, 2));
+        
+        console.log('MENSAGEM SALVA PARA BOT:', chatId);
+        
+        // Notificar PM2 para processar
+        const { exec } = require('child_process');
+        exec('pm2 restart bot-wpp', (error) => {
+            if (error) {
+                console.error('ERRO AO RESTART BOT:', error);
+            }
+        });
+        
+        res.json({
+            success: true,
+            message: 'Message queued for WhatsApp delivery'
         });
         
     } catch (error) {

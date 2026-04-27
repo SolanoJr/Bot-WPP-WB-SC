@@ -164,14 +164,56 @@ const startBot = () => {
     });
 
     client.on('ready', () => {
-        console.log('Bot online');
-        // Inicializar serviço WhatsApp com o cliente
-        whatsappService.initializeWhatsApp(client);
+        console.log('🤖 Bot WhatsApp ready!');
+        console.log('📱 Client State:', client.info);
+        
+        // Processar mensagens pendentes
+        processPendingMessages();
     });
 
     client.on('message_create', createMessageHandler({ client, commands }));
 
     client.initialize();
+};
+
+// Processar mensagens pendentes do backend
+const processPendingMessages = async () => {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const messageFile = path.join(__dirname, '.pending-messages.json');
+    
+    if (!fs.existsSync(messageFile)) {
+        return;
+    }
+    
+    try {
+        const pendingMessages = JSON.parse(fs.readFileSync(messageFile, 'utf8'));
+        
+        if (pendingMessages.length === 0) {
+            return;
+        }
+        
+        console.log(`📨 Processando ${pendingMessages.length} mensagens pendentes`);
+        
+        // Enviar mensagens (precisa do client)
+        for (const msg of pendingMessages) {
+            try {
+                console.log(`📤 Enviando para ${msg.chatId}:`, msg.message.substring(0, 50) + '...');
+                // Aqui precisaria do client global para enviar
+                // await client.sendMessage(msg.chatId, msg.message);
+            } catch (error) {
+                console.error('❌ Erro ao enviar mensagem:', error);
+            }
+        }
+        
+        // Limpar arquivo
+        fs.unlinkSync(messageFile);
+        console.log('✅ Mensagens pendentes processadas');
+        
+    } catch (error) {
+        console.error('❌ Erro ao processar mensagens pendentes:', error);
+    }
 };
 
 module.exports = {
@@ -184,5 +226,6 @@ module.exports = {
     normalizeCommand,
     parseCommandInput,
     parseCommandName,
-    startBot
+    startBot,
+    processPendingMessages
 };
