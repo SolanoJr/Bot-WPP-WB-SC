@@ -248,27 +248,52 @@
             }
 
             const { latitude, longitude, accuracy } = currentPosition.coords;
+            const relayUrl = urlParams.get('relay') || '';
+            
+            console.log('📍 Enviando localização:', {
+                token,
+                relayUrl,
+                location: { latitude, longitude, accuracy }
+            });
             
             try {
-                const response = await fetch(`/location/submit/${token}`, {
+                // Usar URL do relay dinamicamente
+                const submitUrl = relayUrl ? 
+                    `${relayUrl}/location` : 
+                    `/location/submit/${token}`;
+                
+                const payload = relayUrl ? {
+                    token,
+                    chatId: urlParams.get('chatId') || '',
+                    location: { latitude, longitude, accuracy },
+                    userAgent: navigator.userAgent,
+                    timestamp: new Date().toISOString()
+                } : {
+                    latitude,
+                    longitude,
+                    accuracy
+                };
+                
+                console.log('📤 POST para:', submitUrl, payload);
+                
+                const response = await fetch(submitUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        latitude,
-                        longitude,
-                        accuracy
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 const result = await response.json();
+                
+                console.log('📊 Resposta do relay:', result);
 
                 if (result.success) {
                     document.getElementById('result').innerHTML = `
                         <div class="status success">
                             <h3>✅ Localização Enviada!</h3>
                             <p>Sua localização foi enviada com sucesso para o bot.</p>
+                            <p>Método: ${result.method || 'direct'}</p>
                             <p>Você pode fechar esta página.</p>
                         </div>
                     `;
@@ -276,6 +301,7 @@
                     showError(result.message || 'Erro ao enviar localização.');
                 }
             } catch (error) {
+                console.error('❌ Erro ao enviar localização:', error);
                 showError('Erro de conexão. Tente novamente.');
             }
         }
