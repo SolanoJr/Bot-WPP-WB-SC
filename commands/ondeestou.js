@@ -80,8 +80,9 @@ module.exports = {
                     argsCount: args.length
                 });
                 
-                // Iniciar polling por resposta (método robusto)
-                this.startLocationPolling(context, chatId, token);
+                // TEMPORÁRIO: Desativar polling para evitar loop infinito
+                // this.startLocationPolling(context, chatId, token);
+                console.log('⚠️ Polling de localização temporariamente desativado para evitar sobrecarga');
                 
             } else {
                 throw new Error('Falha ao gerar link de localização');

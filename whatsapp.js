@@ -233,16 +233,27 @@ const startBot = () => {
     client.initialize();
 };
 
+// Mutex para evitar reentrada no processamento
+let isProcessingPendingMessages = false;
+
 // Processar mensagens pendentes do backend
 const processPendingMessages = async () => {
     const fs = require('fs');
     const path = require('path');
-    
+
+    // Evitar reentrada
+    if (isProcessingPendingMessages) {
+        console.log('⚠️ Já processando mensagens pendentes, ignorando chamada');
+        return;
+    }
+
     const messageFile = path.join(__dirname, '.pending-messages.json');
-    
+
     if (!fs.existsSync(messageFile)) {
         return;
     }
+
+    isProcessingPendingMessages = true;
     
     try {
         const pendingMessages = JSON.parse(fs.readFileSync(messageFile, 'utf8'));
@@ -290,9 +301,18 @@ const processPendingMessages = async () => {
                     // Continuar mesmo se falhar aquecimento
                 }
                 
-                // Enviar mensagem
+                // Enviar mensagem com timeout para evitar travamentos
                 console.log(`⏳ Enviando mensagem real para ${finalChatId}...`);
-                const result = await globalClient.sendMessage(finalChatId, msg.message);
+                
+                const sendTimeout = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout ao enviar mensagem')), 10000)
+                );
+                
+                const result = await Promise.race([
+                    globalClient.sendMessage(finalChatId, msg.message),
+                    sendTimeout
+                ]);
+                
                 console.log(`✅ Mensagem enviada SUCESSO para ${finalChatId}:`, result.id);
                 console.log(`📊 Raw→Final: ${rawChatId} → ${finalChatId} (${tipo})`);
                 
@@ -314,6 +334,9 @@ const processPendingMessages = async () => {
         
     } catch (error) {
         console.error('❌ Erro ao processar mensagens pendentes:', error);
+    } finally {
+        // Liberar mutex
+        isProcessingPendingMessages = false;
     }
 };
 
