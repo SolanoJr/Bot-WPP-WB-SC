@@ -29,6 +29,17 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Keep-alive ping endpoint
+app.get('/ping', (req, res) => {
+    console.log('🏓 Relay ping received - keeping Render awake');
+    res.json({
+        pong: true,
+        service: 'bot-wpp-relay',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
 // Receber localização do frontend
 app.post('/location', async (req, res) => {
     const { token, chatId, location, userAgent, timestamp } = req.body;

@@ -130,19 +130,30 @@ module.exports = {
         }
     },
 
-    // Polling simples - sem complexidade
+    // Polling com setTimeout recursivo - sem acúmulo
     async startLocationPolling(context, chatId, token) {
-        const maxAttempts = 10; // 30 segundos totais (10 * 3s)
+        const maxAttempts = 10; // 10 tentativas reais
         let attempts = 0;
+        let realResponses = 0; // Contador de respostas reais do servidor
         
-        console.log(`🔄 Iniciando polling SIMPLES:`, {
+        console.log(`🔄 Iniciando polling RECURSIVO:`, {
             chatId: chatId?.substring(0, 20) + '...',
             token: token?.substring(0, 10) + '...',
             relay: RELAY_URL,
             maxAttempts
         });
         
-        const pollInterval = setInterval(async () => {
+        // Keep-alive: ping no relay antes de começar
+        try {
+            console.log(`🏓 Keep-alive ping no relay: ${RELAY_URL}/ping`);
+            await axios.get(`${RELAY_URL}/ping`, { timeout: 3000 });
+            console.log(`✅ Relay ping successful`);
+        } catch (pingError) {
+            console.error(`❌ Relay ping failed:`, pingError.message);
+        }
+        
+        // Função recursiva de polling
+        const pollRecursive = async () => {
             attempts++;
             const startTime = Date.now();
             
@@ -152,17 +163,20 @@ module.exports = {
                 console.log(`⏳ ANTES do axios.get para ${RELAY_URL}/pending/${chatId}`);
                 
                 const response = await axios.get(`${RELAY_URL}/pending/${chatId}`, {
-                    timeout: 15000
+                    timeout: 5000  // Baixado de 15s para 5s
                 });
                 
                 console.log(`✅ DEPOIS do axios.get - response recebida`);
                 
                 const duration = Date.now() - startTime;
+                realResponses++; // Conta resposta real do servidor
                 
                 console.log(`📊 Polling response (${duration}ms):`, {
                     success: response.data.success,
                     hasResponse: !!response.data.response,
-                    responseLength: response.data.response?.length || 0
+                    responseLength: response.data.response?.length || 0,
+                    realResponses,
+                    attempts
                 });
                 
                 if (response.data.success && response.data.response) {
@@ -186,36 +200,52 @@ module.exports = {
                             attempts
                         });
                         
-                        clearInterval(pollInterval);
-                        return;
+                        return; // Finaliza polling
                         
                     } catch (sendError) {
                         console.error(`❌ Erro ao enviar resposta para WhatsApp:`, sendError.message);
-                        console.log(`🔄 Falha no envio, continuando polling...`);
                         
-                        if (attempts >= maxAttempts) {
-                            clearInterval(pollInterval);
-                            console.log(`🛑 Polling finalizado após max attempts com falha de envio`);
+                        if (attempts < maxAttempts) {
+                            console.log(`🔄 Falha no envio, tentando novamente em 3s...`);
+                            setTimeout(pollRecursive, 3000);
+                            return;
                         }
+                        
+                        // Última tentativa falhou
+                        await context.replyService.sendText(context, 'Falha ao enviar localização. Tente novamente.');
                         return;
                     }
                 }
                 
-                // Verificar timeout
-                if (attempts >= maxAttempts) {
-                    clearInterval(pollInterval);
-                    console.log(`⏰ Polling timeout para ${chatId?.substring(0, 20)}... após ${maxAttempts} tentativas`);
-                    
-                    const timeoutMessage = [
-                        '⏰ **TEMPO ESGOTADO**',
-                        '',
-                        'O link de localização expirou.',
-                        'Por favor, solicite um novo link com !ondeestou',
-                        '',
-                        `🤖 **Status:** ${attempts} tentativas`
-                    ].join('\n');
-                    
-                    await context.replyService.sendText(context, timeoutMessage);
+                // Continuar polling se não encontrou resposta
+                if (attempts < maxAttempts) {
+                    setTimeout(pollRecursive, 3000);
+                } else {
+                    // Verificar se teve respostas reais mas não encontrou localização
+                    if (realResponses >= 10) {
+                        const busyMessage = [
+                            '⚠️ **SERVIDOR OCUPADO**',
+                            '',
+                            'Servidor de localização está ocupado no momento.',
+                            'Tente novamente em alguns instantes.',
+                            '',
+                            `🤖 **Status:** ${realResponses} respostas recebidas, sem localização encontrada`
+                        ].join('\n');
+                        
+                        await context.replyService.sendText(context, busyMessage);
+                    } else {
+                        // Timeout normal
+                        const timeoutMessage = [
+                            '⏰ **TEMPO ESGOTADO**',
+                            '',
+                            'O link de localização expirou.',
+                            'Por favor, solicite um novo link com !ondeestou',
+                            '',
+                            `🤖 **Status:** ${attempts} tentativas, ${realResponses} respostas`
+                        ].join('\n');
+                        
+                        await context.replyService.sendText(context, timeoutMessage);
+                    }
                 }
                 
             } catch (error) {
@@ -229,11 +259,27 @@ module.exports = {
                     relay: RELAY_URL
                 });
                 
-                if (attempts >= maxAttempts) {
-                    clearInterval(pollInterval);
-                    console.log(`🛑 Polling finalizado para ${chatId?.substring(0, 20)}... após max attempts`);
+                // Continuar polling se houver erro de rede
+                if (attempts < maxAttempts) {
+                    console.log(`🔄 Erro de rede, tentando novamente em 3s...`);
+                    setTimeout(pollRecursive, 3000);
+                } else {
+                    // Fallback após esgotar tentativas
+                    const fallbackMessage = [
+                        '⚠️ **FALHA DE CONEXÃO**',
+                        '',
+                        'Não foi possível conectar ao servidor de localização.',
+                        'Verifique sua conexão e tente novamente.',
+                        '',
+                        `🤖 **Status:** ${attempts} tentativas sem resposta`
+                    ].join('\n');
+                    
+                    await context.replyService.sendText(context, fallbackMessage);
                 }
             }
-        }, 3000); // Polling simples a cada 3 segundos
+        };
+        
+        // Iniciar polling recursivo
+        setTimeout(pollRecursive, 1000); // Pequeno delay antes da primeira tentativa
     }
 };
