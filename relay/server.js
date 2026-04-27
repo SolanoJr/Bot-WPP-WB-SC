@@ -129,8 +129,8 @@ app.post('/location', async (req, res) => {
     }
 });
 
-// Endpoint para o bot buscar localizações pendentes (polling rápido)
-app.get('/pending/:chatId', async (req, res) => {
+// Endpoint para o bot buscar localizações pendentes (puramente reativo)
+app.get('/pending/:chatId', (req, res) => {
     const { chatId } = req.params;  // Primeiro extrai
     const cleanId = String(chatId).trim();  // Depois limpa
     const startTime = Date.now();
@@ -138,54 +138,52 @@ app.get('/pending/:chatId', async (req, res) => {
     console.log(`🔍 Bot consultando pendências para: ${cleanId}. Status: Verificando backend...`);
     
     try {
-        // Buscar no backend instantaneamente (sem espera)
-        const response = await axios.get(
+        // Buscar no backend instantaneamente (sem esperas artificiais)
+        axios.get(
             `${BACKEND_URL}/location/pending-responses/${cleanId}`,
             {
                 httpsAgent: tailscaleAgent,
-                timeout: 5000  // Reduzido para resposta rápida
+                timeout: 5000  // Resposta rápida do backend
             }
-        );
-        
-        const duration = Date.now() - startTime;
-        const found = !!(response.data.success && response.data.response);
-        
-        console.log(`Checking data for ${cleanId}: ${found}`);
-        console.log(`✅ Resposta encontrada para ${cleanId?.substring(0, 20)}... (${duration}ms):`, {
-            success: response.data.success,
-            hasResponse: found,
-            responseLength: response.data.response?.length || 0
-        });
-        
-        res.json(response.data);
-        
-    } catch (error) {
-        const duration = Date.now() - startTime;
-        
-        // Se não houver dados, responder 204 imediatamente (polling rápido)
-        if (error.response?.status === 404 || error.code === 'ENOTFOUND') {
-            console.log(`Checking data for ${cleanId}: false (404 - sem dados)`);
-            res.status(204).end();  // Resposta vazia instantânea
-            return;
-        }
-        
-        console.error(`❌ Erro ao buscar respostas pendentes (${duration}ms):`, {
-            chatId: chatId?.substring(0, 20) + '...',
-            error: error.message,
-            code: error.code,
-            backend: BACKEND_URL
-        });
-        
-        res.status(500).json({
-            success: false,
-            message: 'Erro ao buscar respostas pendentes',
-            debug: {
-                duration,
+        ).then(response => {
+            const duration = Date.now() - startTime;
+            const found = !!(response.data.success && response.data.response);
+            
+            console.log(`Checking data for ${cleanId}: ${found}`);
+            console.log(`✅ Resposta encontrada para ${cleanId?.substring(0, 20)}... (${duration}ms):`, {
+                success: response.data.success,
+                hasResponse: found,
+                responseLength: response.data.response?.length || 0
+            });
+            
+            res.json(response.data);  // Retorna 200 com dados
+            
+        }).catch(error => {
+            const duration = Date.now() - startTime;
+            
+            // Se não houver dados, responder 204 imediatamente
+            if (error.response?.status === 404 || error.code === 'ENOTFOUND') {
+                console.log(`Checking data for ${cleanId}: false (404 - sem dados)`);
+                return res.status(204).send();  // Resposta vazia instantânea
+            }
+            
+            console.error(`❌ Erro ao buscar respostas (${duration}ms):`, {
+                chatId: cleanId?.substring(0, 20) + '...',
                 error: error.message,
+                code: error.code,
                 backend: BACKEND_URL
-            }
+            });
+            
+            res.status(500).json({
+                success: false,
+                message: 'Erro ao buscar respostas pendentes',
+                debug: {
+                    duration,
+                    error: error.message,
+                    backend: BACKEND_URL
+                }
+            });
         });
-    }
 });
 
 // Status geral do relay

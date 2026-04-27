@@ -170,7 +170,7 @@ module.exports = {
                 console.log(`⏳ ANTES do axios.get para ${cleanRelayUrl}/pending/${chatId}`);
                 
                 const response = await axios.get(`${cleanRelayUrl}/pending/${chatId}`, {
-                    timeout: 5000,  // Reduzido para 5s (polling rápido)
+                    timeout: 10000,  // Aumentado para 10s (Render throttling)
                     headers: { 'Connection': 'keep-alive' }
                 });
                 
