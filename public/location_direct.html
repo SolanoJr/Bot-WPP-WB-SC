@@ -196,7 +196,15 @@
             
             // Enviar diretamente para o WhatsApp via webhook
             try {
-                const response = await fetch('/location/send-direct', {
+                console.log('Enviando localização:', { 
+                    lat: latitude, 
+                    lng: longitude, 
+                    token, 
+                    chatId,
+                    endpoint: 'https://bot-wpp-wb-sc.onrender.com/location/send-direct'
+                });
+                
+                const response = await fetch('https://bot-wpp-wb-sc.onrender.com/location/send-direct', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

@@ -177,7 +177,14 @@
             const { latitude, longitude, accuracy } = currentPosition.coords;
             
             try {
-                const response = await fetch(`/location/submit/${token}`, {
+                console.log('Enviando localização:', { 
+                    lat: latitude, 
+                    lng: longitude, 
+                    token,
+                    endpoint: 'https://bot-wpp-wb-sc.onrender.com/location/submit/' + token
+                });
+                
+                const response = await fetch(`https://bot-wpp-wb-sc.onrender.com/location/submit/${token}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

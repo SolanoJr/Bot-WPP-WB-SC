@@ -36,9 +36,8 @@ router.post('/request/:userId', (req, res) => {
         }
     }
     
-    // Retornar URL para o usuário
-    const backendUrl = process.env.BACKEND_URL || 'https://100.101.218.16:8443';
-    const locationUrl = `${backendUrl}/location_direct.html?token=${token}&chatId=${chatId}`;
+    // Retornar URL para o usuário - FORÇAR Cloudflare Pages
+    const locationUrl = `https://bot-wpp-wb-sc.pages.dev/location_direct.html?token=${token}&chatId=${chatId}`;
     
     res.json({
         success: true,
@@ -163,27 +162,53 @@ router.get('/pending-responses/:chatId', (req, res) => {
 router.post('/send-direct', async (req, res) => {
     const { chatId, message, location } = req.body;
     
-    console.log('Enviando localização direta para WhatsApp:', { chatId, location });
-    
-    // Aqui você implementaria o envio direto para WhatsApp
-    // Por enquanto, vamos simular o envio bem-sucedido
-    
-    // Na implementação real, você usaria a API do WhatsApp Web ou uma biblioteca
-    // para enviar a mensagem diretamente para o chatId
+    console.log('LOCALIZAÇÃO RECEBIDA:', { 
+        chatId, 
+        location,
+        messageLength: message.length,
+        timestamp: new Date().toISOString()
+    });
     
     try {
-        // Simulação de envio bem-sucedido
-        console.log('Mensagem enviada diretamente para WhatsApp:', message.substring(0, 50) + '...');
+        // Enviar mensagem diretamente para o WhatsApp usando o serviço
+        const whatsappService = require('../../services/whatsappService');
+        const client = whatsappService.getClient();
+        
+        if (client && client.sendMessage) {
+            await client.sendMessage(chatId, message);
+            console.log('MENSAGEM ENVIADA PARA WHATSAPP:', chatId);
+            
+            res.json({
+                success: true,
+                message: 'Localização enviada com sucesso para o WhatsApp'
+            });
+        } else {
+            console.error('Cliente WhatsApp não disponível');
+            
+            // Fallback: armazenar para polling
+            pendingResponses.set(chatId, {
+                response: message,
+                timestamp: Date.now()
+            });
+            
+            res.json({
+                success: true,
+                message: 'Localização recebida e armazenada para envio'
+            });
+        }
+        
+    } catch (error) {
+        console.error('ERRO AO ENVIAR PARA WHATSAPP:', error);
+        
+        // Fallback: armazenar para polling
+        pendingResponses.set(chatId, {
+            response: message,
+            timestamp: Date.now()
+        });
         
         res.json({
             success: true,
-            message: 'Localização enviada com sucesso para o WhatsApp'
-        });
-    } catch (error) {
-        console.error('Erro ao enviar diretamente para WhatsApp:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erro ao enviar localização para o WhatsApp'
+            message: 'Localização recebida (backup ativo)'
         });
     }
 });

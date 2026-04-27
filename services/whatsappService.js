@@ -49,8 +49,14 @@ const sendLocationResponse = async (chatId, locationData) => {
     return await sendMessage(chatId, message);
 };
 
+// Obter instância do cliente
+const getClient = () => {
+    return whatsappClient;
+};
+
 module.exports = {
     initializeWhatsApp,
     sendMessage,
-    sendLocationResponse
+    sendLocationResponse,
+    getClient
 };
