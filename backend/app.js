@@ -10,6 +10,7 @@ const { registerInstanceRoutes } = require('./routes/instanceRoutes');
 const { registerUsageRoutes } = require('./routes/usageRoutes');
 const { registerFeedbackRoutes } = require('./routes/feedbackRoutes');
 const { registerLocationRoutes } = require('./routes/locationRoutes');
+const { registerInternalRoutes } = require('./routes/internalRoutes');
 
 const createApp = () => {
     const app = express();
@@ -31,6 +32,7 @@ const createApp = () => {
     registerUsageRoutes(app);
     registerFeedbackRoutes(app);
     registerLocationRoutes(app);
+    registerInternalRoutes(app);
 
     app.use((req, res) => {
         return res.status(404).json({

@@ -170,35 +170,33 @@ router.post('/send-direct', async (req, res) => {
     });
     
     try {
-        // Enviar mensagem diretamente para o WhatsApp usando o serviço
-        const whatsappService = require('../../services/whatsappService');
-        const client = whatsappService.getClient();
+        // Enviar para servidor Linux que tem o client WhatsApp
+        const serverResponse = await fetch('http://100.101.218.16:4010/internal/send-message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                chatId,
+                message
+            })
+        });
         
-        if (client && client.sendMessage) {
-            await client.sendMessage(chatId, message);
-            console.log('MENSAGEM ENVIADA PARA WHATSAPP:', chatId);
+        const result = await serverResponse.json();
+        
+        if (result.success) {
+            console.log('MENSAGEM ENVIADA VIA SERVIDOR LINUX:', chatId);
             
             res.json({
                 success: true,
                 message: 'Localização enviada com sucesso para o WhatsApp'
             });
         } else {
-            console.error('Cliente WhatsApp não disponível');
-            
-            // Fallback: armazenar para polling
-            pendingResponses.set(chatId, {
-                response: message,
-                timestamp: Date.now()
-            });
-            
-            res.json({
-                success: true,
-                message: 'Localização recebida e armazenada para envio'
-            });
+            throw new Error(result.message || 'Server response failed');
         }
         
     } catch (error) {
-        console.error('ERRO AO ENVIAR PARA WHATSAPP:', error);
+        console.error('ERRO AO ENVIAR PARA SERVIDOR LINUX:', error);
         
         // Fallback: armazenar para polling
         pendingResponses.set(chatId, {
