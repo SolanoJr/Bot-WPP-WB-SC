@@ -21,13 +21,19 @@ const validateChatId = (chatId) => {
     return privatePattern.test(chatId) || groupPattern.test(chatId);
 };
 
-// Resolver chatId para envio (números frios, normalização)
-const resolveChatIdForSend = async (client, rawChatId) => {
-    console.log(`🔍 Resolvendo chatId: ${rawChatId}`);
+// Resolver chatId para envio (SEMPRE resolve privados via getNumberId)
+const resolveChatIdForSend = async (client, rawChatId, skipResolve = false) => {
+    console.log(`🔍 Resolvendo chatId: ${rawChatId} (skipResolve: ${skipResolve})`);
     
-    // Se for grupo, retorna como está
+    // Se for grupo, retorna como está (não resolve)
     if (rawChatId.includes('@g.us')) {
         console.log(`✅ Grupo detectado, usando como está: ${rawChatId}`);
+        return rawChatId;
+    }
+    
+    // Se skipResolve=true e já tiver @c.us, retorna como está
+    if (skipResolve && rawChatId.includes('@c.us')) {
+        console.log(`✅ Skip resolve ativo, usando chatId como está: ${rawChatId}`);
         return rawChatId;
     }
     
@@ -39,13 +45,7 @@ const resolveChatIdForSend = async (client, rawChatId) => {
     
     console.log(`📱 Número normalizado: ${normalizedNumber}`);
     
-    // Se já tiver @c.us e for válido, retorna
-    if (rawChatId.includes('@c.us') && validateChatId(rawChatId)) {
-        console.log(`✅ ChatId já válido: ${rawChatId}`);
-        return rawChatId;
-    }
-    
-    // Tentar resolver número frio
+    // SEMPRE tentar resolver via getNumberId (para números frios com @c.us também)
     try {
         console.log(`🔎 Buscando ID para número: ${normalizedNumber}`);
         const numberId = await client.getNumberId(normalizedNumber);
@@ -273,8 +273,8 @@ const processPendingMessages = async () => {
                     continue;
                 }
                 
-                // Resolver chatId para envio
-                const finalChatId = await resolveChatIdForSend(globalClient, rawChatId);
+                // Resolver chatId para envio (padrão: resolve sempre)
+                const finalChatId = await resolveChatIdForSend(globalClient, rawChatId, false);
                 
                 if (!finalChatId) {
                     console.error(`❌ ChatId não resolvido: ${rawChatId} → pulando mensagem`);
