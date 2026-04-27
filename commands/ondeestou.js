@@ -132,9 +132,13 @@ module.exports = {
 
     // Polling com setTimeout recursivo - sem acúmulo
     async startLocationPolling(context, chatId, token) {
-        const maxAttempts = 10; // 10 tentativas reais
+        const maxAttempts = 30; // 30 tentativas (90 segundos totais)
         let attempts = 0;
         let realResponses = 0; // Contador de respostas reais do servidor
+        
+        // Verificar RELAY_URL sem barra no final
+        const cleanRelayUrl = RELAY_URL.replace(/\/$/, '');
+        console.log(`🔍 RELAY_URL limpa: ${cleanRelayUrl} (original: ${RELAY_URL})`);
         
         console.log(`🔄 Iniciando polling RECURSIVO:`, {
             chatId: chatId?.substring(0, 20) + '...',
@@ -145,8 +149,11 @@ module.exports = {
         
         // Keep-alive: ping no relay antes de começar
         try {
-            console.log(`🏓 Keep-alive ping no relay: ${RELAY_URL}/ping`);
-            await axios.get(`${RELAY_URL}/ping`, { timeout: 3000 });
+            console.log(`🏓 Keep-alive ping no relay: ${cleanRelayUrl}/ping`);
+            await axios.get(`${cleanRelayUrl}/ping`, { 
+                timeout: 3000,
+                headers: { 'Connection': 'keep-alive' }
+            });
             console.log(`✅ Relay ping successful`);
         } catch (pingError) {
             console.error(`❌ Relay ping failed:`, pingError.message);
@@ -160,10 +167,11 @@ module.exports = {
             console.log(`🔍 Polling attempt ${attempts}/${maxAttempts} para ${chatId?.substring(0, 20)}...`);
             
             try {
-                console.log(`⏳ ANTES do axios.get para ${RELAY_URL}/pending/${chatId}`);
+                console.log(`⏳ ANTES do axios.get para ${cleanRelayUrl}/pending/${chatId}`);
                 
-                const response = await axios.get(`${RELAY_URL}/pending/${chatId}`, {
-                    timeout: 5000  // Baixado de 15s para 5s
+                const response = await axios.get(`${cleanRelayUrl}/pending/${chatId}`, {
+                    timeout: 5000,  // Baixado de 15s para 5s
+                    headers: { 'Connection': 'keep-alive' }
                 });
                 
                 console.log(`✅ DEPOIS do axios.get - response recebida`);
@@ -251,12 +259,23 @@ module.exports = {
             } catch (error) {
                 const duration = Date.now() - startTime;
                 
+                // Tratar erro 502 específico
+                if (error.code === 'ERR_BAD_RESPONSE' || error.message.includes('502')) {
+                    console.warn(`⚠️ Relay reiniciando ou instável (502). Tentando novamente... (${duration}ms)`);
+                    
+                    // Continuar polling sem contar como falha fatal
+                    if (attempts < maxAttempts) {
+                        setTimeout(pollRecursive, 3000);
+                        return;
+                    }
+                }
+                
                 console.error(`❌ Erro no polling (${duration}ms):`, {
                     chatId: chatId?.substring(0, 20) + '...',
                     attempt: `${attempts}/${maxAttempts}`,
                     error: error.message,
                     code: error.code,
-                    relay: RELAY_URL
+                    relay: cleanRelayUrl
                 });
                 
                 // Continuar polling se houver erro de rede

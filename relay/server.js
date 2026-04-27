@@ -19,17 +19,7 @@ const tailscaleAgent = new https.Agent({
     rejectUnauthorized: false
 });
 
-// Health check
-app.get('/health', (req, res) => {
-    res.json({
-        ok: true,
-        service: 'bot-wpp-relay',
-        timestamp: new Date().toISOString(),
-        backend: BACKEND_URL
-    });
-});
-
-// Keep-alive ping endpoint
+// Keep-alive ping endpoint - PRIMEIRO para evitar conflitos
 app.get('/ping', (req, res) => {
     console.log('🏓 Relay ping received - keeping Render awake');
     res.json({
@@ -37,6 +27,16 @@ app.get('/ping', (req, res) => {
         service: 'bot-wpp-relay',
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
+    });
+});
+
+// Health check
+app.get('/health', (req, res) => {
+    res.json({
+        ok: true,
+        service: 'bot-wpp-relay',
+        timestamp: new Date().toISOString(),
+        backend: BACKEND_URL
     });
 });
 
@@ -205,7 +205,21 @@ app.listen(PORT, () => {
     console.log(`🚀 Relay API rodando na porta ${PORT}`);
     console.log(`📡 Backend: ${BACKEND_URL}`);
     console.log(`🔗 Health: http://localhost:${PORT}/health`);
+    console.log(`🏓 Ping: http://localhost:${PORT}/ping`);
+    console.log(`📊 Status: http://localhost:${PORT}/status`);
+    console.log(`📍 Location: POST http://localhost:${PORT}/location`);
+    console.log(`🔍 Pending: GET http://localhost:${PORT}/pending/:chatId`);
     console.log(`⏰ Iniciado: ${new Date().toISOString()}`);
+    
+    // Log de rotas registradas
+    console.log(`📋 Rotas registradas:`);
+    app._router.stack.forEach((middleware) => {
+        if (middleware.route) {
+            const methods = Object.keys(middleware.route.methods).join(', ').toUpperCase();
+            const path = middleware.route.path;
+            console.log(`   ${methods} ${path}`);
+        }
+    });
 });
 
 // Graceful shutdown
