@@ -80,10 +80,9 @@ module.exports = {
                     argsCount: args.length
                 });
                 
-                // HOTFIX: Desativar polling completamente para parar spam de timeout
-                // this.startLocationPolling(context, chatId, token);
-                console.log('🚨 POLLING DESATIVADO - Link gerado mas sem verificação automática');
-                console.log('📝 Usuário deve enviar manualmente: !status ou !ajuda');
+                // Reativar polling com rate-limit real e logs melhorados
+                this.startLocationPolling(context, chatId, token);
+                console.log('� Polling reativado com timeout 15000ms e rate-limit');
                 
             } else {
                 throw new Error('Falha ao gerar link de localização');
@@ -123,33 +122,59 @@ module.exports = {
         }
     },
 
-    // Polling por resposta de localização
+    // Polling por resposta de localização com rate-limit real
     async startLocationPolling(context, chatId, token) {
         const maxAttempts = 60; // 10 minutos (60 * 10 segundos)
         let attempts = 0;
         
+        // Rate-limit real com variável estática (global para todas as instâncias)
+        if (!this.constructor._lastPollingErrorLog) {
+            this.constructor._lastPollingErrorLog = 0;
+        }
+        
+        console.log(`🔄 Iniciando polling para chatId: ${chatId?.substring(0, 20)}... (token: ${token?.substring(0, 10)}...)`);
+        
         const pollInterval = setInterval(async () => {
             attempts++;
+            const startTime = Date.now();
             
             try {
+                console.log(`🔍 Polling attempt ${attempts}/${maxAttempts} para ${chatId?.substring(0, 20)}...`);
+                
                 // Verificar no relay (timeout aumentado para 15s)
                 const response = await axios.get(`${RELAY_URL}/pending/${chatId}`, {
                     timeout: 15000
                 });
                 
+                const duration = Date.now() - startTime;
+                console.log(`📊 Polling response (${duration}ms):`, {
+                    success: response.data.success,
+                    hasResponse: !!response.data.response,
+                    responseLength: response.data.response?.length || 0,
+                    debug: response.data.debug
+                });
+                
                 if (response.data.success && response.data.response) {
-                    // Enviar resposta para o WhatsApp
-                    await context.replyService.sendText(context, response.data.response);
+                    console.log(`✅ Encontrei resposta para ${chatId?.substring(0, 20)}..., enviando...`);
                     
-                    // Registrar sucesso
-                    await telemetryService.registerUsage({
-                        commandName: 'ondeestou_response',
-                        instanceId: 'main',
-                        groupId: chatId.includes('@g.us') ? chatId : null,
-                        userId: context.message?.from,
-                        success: true,
-                        latency: 0
-                    });
+                    try {
+                        // Enviar resposta para o WhatsApp
+                        await context.replyService.sendText(context, response.data.response);
+                        console.log(`✅ Resposta enviada com sucesso para ${chatId?.substring(0, 20)}...`);
+                        
+                        // Registrar sucesso
+                        await telemetryService.registerUsage({
+                            commandName: 'ondeestou_response',
+                            instanceId: 'main',
+                            groupId: chatId.includes('@g.us') ? chatId : null,
+                            userId: context.message?.from,
+                            success: true,
+                            latency: 0
+                        });
+                        
+                    } catch (sendError) {
+                        console.error(`❌ Erro ao enviar resposta para WhatsApp:`, sendError.message);
+                    }
                     
                     clearInterval(pollInterval);
                     return;
@@ -158,6 +183,7 @@ module.exports = {
                 // Verificar timeout
                 if (attempts >= maxAttempts) {
                     clearInterval(pollInterval);
+                    console.log(`⏰ Polling timeout para ${chatId?.substring(0, 20)}... após ${maxAttempts} tentativas`);
                     
                     // Enviar mensagem de timeout
                     const timeoutMessage = [
@@ -173,32 +199,41 @@ module.exports = {
                 }
                 
             } catch (error) {
-                // Rate-limit para logs de erro (1x por minuto)
+                const duration = Date.now() - startTime;
+                
+                // Rate-limit real para logs de erro (1x por minuto global)
                 const now = Date.now();
-                const lastLogTime = this._lastPollingErrorLog || 0;
+                const lastLogTime = this.constructor._lastPollingErrorLog;
                 const logInterval = 60000; // 1 minuto
                 
                 if (now - lastLogTime > logInterval) {
-                    console.error('Erro no polling de localização:', error.message);
-                    this._lastPollingErrorLog = now;
+                    console.error(`❌ Erro no polling (${duration}ms):`, {
+                        chatId: chatId?.substring(0, 20) + '...',
+                        attempt: `${attempts}/${maxAttempts}`,
+                        error: error.message,
+                        code: error.code,
+                        relay: RELAY_URL
+                    });
+                    this.constructor._lastPollingErrorLog = now;
                     
                     // Se for timeout, continuar tentando
                     if (error.code === 'ECONNABORTED') {
-                        console.log(`Timeout no polling (${attempts}/${maxAttempts}) - continuando...`);
+                        console.log(`⏱️ Timeout no polling (${attempts}/${maxAttempts}) - continuando...`);
                     }
                     // Se for erro de rede, continuar tentando
                     else if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND') {
-                        console.log(`Erro de rede no polling (${attempts}/${maxAttempts}) - continuando...`);
+                        console.log(`🌐 Erro de rede no polling (${attempts}/${maxAttempts}) - continuando...`);
                     }
                     // Se for outro erro, logar completo
                     else {
-                        console.error('Erro crítico no polling:', error);
+                        console.error('🚨 Erro crítico no polling:', error);
                     }
                 }
                 
                 // Continuar polling em caso de erro de rede
                 if (attempts >= maxAttempts) {
                     clearInterval(pollInterval);
+                    console.log(`🛑 Polling finalizado para ${chatId?.substring(0, 20)}... após max attempts`);
                 }
             }
         }, 10000); // Verificar a cada 10 segundos

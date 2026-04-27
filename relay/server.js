@@ -112,24 +112,46 @@ app.post('/location', async (req, res) => {
 // Endpoint para o bot buscar localizações pendentes (polling)
 app.get('/pending/:chatId', async (req, res) => {
     const { chatId } = req.params;
+    const startTime = Date.now();
+    
+    console.log(`🔍 Buscando resposta pendente para chatId: ${chatId?.substring(0, 20)}...`);
     
     try {
-        // Buscar no backend
+        // Buscar no backend com timeout aumentado
         const response = await axios.get(
             `${BACKEND_URL}/location/pending-responses/${chatId}`,
             {
                 httpsAgent: tailscaleAgent,
-                timeout: 5000
+                timeout: 15000  // Aumentado de 5000ms para 15000ms
             }
         );
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ Resposta encontrada para ${chatId?.substring(0, 20)}... (${duration}ms):`, {
+            success: response.data.success,
+            hasResponse: !!response.data.response,
+            responseLength: response.data.response?.length || 0
+        });
         
         res.json(response.data);
         
     } catch (error) {
-        console.error('Erro ao buscar respostas pendentes:', error.message);
+        const duration = Date.now() - startTime;
+        console.error(`❌ Erro ao buscar respostas pendentes (${duration}ms):`, {
+            chatId: chatId?.substring(0, 20) + '...',
+            error: error.message,
+            code: error.code,
+            backend: BACKEND_URL
+        });
+        
         res.json({
             success: false,
-            message: 'Nenhuma resposta pendente'
+            message: 'Nenhuma resposta pendente',
+            debug: {
+                duration,
+                error: error.message,
+                backend: BACKEND_URL
+            }
         });
     }
 });
