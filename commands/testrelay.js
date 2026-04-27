@@ -66,10 +66,13 @@ module.exports = {
                 
             } catch (postError) {
                 const postDuration = Date.now() - postStart;
+                const statusCode = postError.response?.status || 'N/A';
+                const errorCode = postError.code || 'N/A';
+                
                 console.error(`❌ POST failed (${postDuration}ms):`, {
                     error: postError.message,
-                    code: postError.code,
-                    statusCode: postError.response?.status || 'N/A'
+                    code: errorCode,
+                    statusCode: statusCode
                 });
             }
             
