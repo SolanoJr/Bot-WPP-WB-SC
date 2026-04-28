@@ -1,1 +1,2 @@
 {"timestamp":"2026-04-25T19:41:44.166Z","commandName":"test_command","instanceId":"test","groupId":"test-group","userId":"test-user","success":true,"errorCode":null,"latency":100,"argsCount":0,"retentionType":"usage"}
+{"timestamp":"2026-04-28T13:55:09.222Z","commandName":"ondeestou","instanceId":"main","groupId":null,"userId":"Número não identificado","success":false,"errorCode":"LOCATION_REQUEST_FAILED","latency":638,"argsCount":0,"retentionType":"usage"}
