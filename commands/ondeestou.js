@@ -75,20 +75,49 @@ module.exports = {
                 console.log(`📥 Localização recebida para o chatId: ${chatId}`);
                 console.log(`📍 Dados:`, location);
                 
+                const lat = location.location?.latitude;
+                const lng = location.location?.longitude;
+                const accuracy = location.location?.accuracy || 'N/A';
+                const timestamp = new Date(location.timestamp);
+                
+                // Criar link do Google Maps
+                const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}&z=18`;
+                
+                // Obter informações do contato/grupo
+                const contactName = msg.pushname || msg.contact?.pushname || 'Contato';
+                const isGroup = msg.from.endsWith('@g.us');
+                const chatType = isGroup ? 'Grupo' : 'Conversa Privada';
+                
+                // Formatar data e hora
+                const formattedTime = timestamp.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
                 const locationMessage = [
-                    '📍 **LOCALIZAÇÃO RECEBIDA**',
+                    '�️ **LOCALIZAÇÃO RECEBIDA COM SUCESSO!**',
                     '',
-                    `**Latitude:** ${location.location?.latitude || 'N/A'}`,
-                    `**Longitude:** ${location.location?.longitude || 'N/A'}`,
-                    `**Precisão:** ${location.location?.accuracy || 'N/A'} metros`,
-                    `**Horário:** ${new Date(location.timestamp).toLocaleString('pt-BR')}`,
+                    `👤 **${contactName}** (${chatType})`,
+                    `⏰ **Recebido:** ${formattedTime}`,
                     '',
-                    `🤖 **ChatId:** ${chatId?.substring(0, 20)}...`,
-                    `🔗 **Token:** ${token?.substring(0, 20)}...`
+                    '📍 **COORDENADAS:**',
+                    `🌐 **Latitude:** ${lat}`,
+                    `🌐 **Longitude:** ${lng}`,
+                    `🎯 **Precisão:** ${accuracy} metros`,
+                    '',
+                    `🔍 **Ver no mapa:**`,
+                    `${googleMapsUrl}`,
+                    '',
+                    `📱 **ChatId:** ${chatId}`,
+                    `� **Token:** ${token?.substring(0, 15)}...`
                 ].join('\n');
                 
                 await msg.reply(locationMessage);
-                console.log(`✅ Localização entregue com sucesso!`);
+                console.log(`✅ Localização entregue com sucesso para ${contactName}!`);
                 
             } catch (error) {
                 const duration = Date.now() - startTime;
