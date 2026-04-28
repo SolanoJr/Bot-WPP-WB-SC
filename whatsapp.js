@@ -4,7 +4,9 @@ const fs = require('fs');
 const path = require('path');
 
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({
+        clientId: 'bot-wpp-session'
+    }),
     puppeteer: {
         headless: true,
         args: [
@@ -13,9 +15,12 @@ const client = new Client({
             '--disable-dev-shm-usage',
             '--single-process',
             '--no-zygote',
-            '--disable-gpu'
+            '--disable-gpu',
+            '--disable-web-security',
+            '--disable-features=VizDisplayCompositor'
         ],
-    }
+    },
+    restartOnAuthFail: true
 });
 
 const COMMAND_PREFIX = '!';

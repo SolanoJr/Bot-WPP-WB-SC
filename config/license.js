@@ -303,6 +303,25 @@ class LicenseManager {
         }
     }
 
+    // 👑 Verificar se é administrador
+    isAdmin(userId) {
+        try {
+            const users = this.loadUsers();
+            const user = users[userId];
+            
+            if (!user) {
+                return false;
+            }
+            
+            const permissions = user.permissions || [];
+            return permissions.includes('*') || permissions.includes('admin');
+            
+        } catch (error) {
+            console.error('❌ Erro ao verificar administrador:', error);
+            return false;
+        }
+    }
+
     // 🎯 Verificação de permissões
     hasPermission(userId, command) {
         if (!this.enableUserControl) {
