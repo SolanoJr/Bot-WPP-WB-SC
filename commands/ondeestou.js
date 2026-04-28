@@ -99,21 +99,21 @@ module.exports = {
                 });
                 
                 const locationMessage = [
-                    '�️ **LOCALIZAÇÃO RECEBIDA COM SUCESSO!**',
+                    '🗺️ *LOCALIZAÇÃO RECEBIDA COM SUCESSO!*',
                     '',
-                    `👤 **${contactName}** (${chatType})`,
-                    `⏰ **Recebido:** ${formattedTime}`,
+                    `👤 *${contactName}* (${chatType})`,
+                    `⏰ *Recebido:* ${formattedTime}`,
                     '',
-                    '📍 **COORDENADAS:**',
-                    `🌐 **Latitude:** ${lat}`,
-                    `🌐 **Longitude:** ${lng}`,
-                    `🎯 **Precisão:** ${accuracy} metros`,
+                    '📍 *COORDENADAS:*',
+                    `🌐 *Latitude:* ${lat}`,
+                    `🌐 *Longitude:* ${lng}`,
+                    `🎯 *Precisão:* ${accuracy} metros`,
                     '',
-                    `🔍 **Ver no mapa:**`,
+                    `🔍 *Ver no mapa:*`,
                     `${googleMapsUrl}`,
                     '',
-                    `📱 **ChatId:** ${chatId}`,
-                    `� **Token:** ${token?.substring(0, 15)}...`
+                    `📱 *ChatId:* ${chatId}`,
+                    `🔑 *Token:* ${token?.substring(0, 15)}...`
                 ].join('\n');
                 
                 await msg.reply(locationMessage);
