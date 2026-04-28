@@ -4,8 +4,9 @@
 
 **Projeto:** Bot WhatsApp com Sistema de Localização em Tempo Real  
 **Status:** ✅ **100% FUNCIONAL E PRODUÇÃO**  
-**Última Atualização:** 28/04/2026  
-**Versão:** v1.0.0-stable  
+**Última Atualização:** 28/04/2026 - 16:45  
+**Versão:** v1.0.1-stable-debugged  
+**Último Problema:** Debugging de comandos e estabilização do sistema  
 
 ---
 
@@ -131,9 +132,58 @@
 
 ---
 
+### **🔧 FASE 5: DEBUGGING DE COMANDOS E ESTABILIZAÇÃO**
+**Período:** Resolução de problemas críticos de comandos  
+**Status:** ✅ **CONCLUÍDO (28/04/2026)**
+
+**Problemas e Soluções:**
+
+#### **❌ Problema 1: Comandos não funcionando**
+- **Causa:** Arquivos corrompidos durante transferência para Linux
+- **Sintomas:** "Cannot read properties of undefined", "values", "sendText"
+- **Solução:** Reenviar arquivos limpos do Windows para Linux
+- **Resultado:** ✅ Todos os comandos funcionando
+
+#### **❌ Problema 2: Timeout do Puppeteer**
+- **Causa:** Contexto destruído por navegação interna
+- **Sintomas:** "Runtime.callFunctionOn timed out", "Execution context was destroyed"
+- **Solução:** Aumentar protocolTimeout para 60 segundos
+- **Resultado:** ✅ Bot inicializa sem erros
+
+#### **❌ Problema 3: Cache corrompido**
+- **Causa:** Sessão WhatsApp corrompida após múltiplos restarts
+- **Sintomas:** Bot não conectava, ficava em loop
+- **Solução:** Limpar .wwebjs_auth e .wwebjs_cache
+- **Resultado:** ✅ Bot conecta automaticamente
+
+#### **❌ Problema 4: Dependências quebradas**
+- **Causa:** Comandos !admin e !ondeestou com require('../config/license')
+- **Sintomas:** "Cannot find module '../config/license'"
+- **Solução:** Criar versões simplificadas sem dependências
+- **Resultado:** ✅ 8 comandos carregados com sucesso
+
+---
+
+### **🔄 FASE 6: SISTEMA DE CONTROLE E LICENCIAMENTO**
+**Período:** Implementação de sistema comercial  
+**Status:** ⏸️ **EM PAUSA** (aguardando base estável)
+
+**O que foi planejado:**
+- 📋 Sistema de licenciamento via .env
+- 📋 Controle de usuários via users.json
+- 📋 Multi-dispositivo e limites diários
+- 📋 Logs de auditoria e segurança
+
+**Motivo da Pausa:**
+- Prioridade foi estabilizar bot básico
+- Sistema de controle complexo demais com bugs atuais
+- Decisão: implementar após base 100% funcional
+
+---
+
 ## 🎯 **FUNCIONALIDADES IMPLEMENTADAS**
 
-### **✅ COMANDOS DO BOT:**
+### **✅ COMANDOS DO BOT (8 FUNCIONANDO):**
 
 #### **!ondeestou**
 ```bash
@@ -142,7 +192,7 @@
 # Inicia polling automático
 # Entrega localização formatada
 ```
-**Status:** ✅ **100% FUNCIONAL**
+**Status:** ✅ **100% FUNCIONAL (28/04/2026)**
 
 #### **!testrelay**
 ```bash
@@ -161,14 +211,45 @@
 ```
 **Status:** ✅ **100% FUNCIONAL**
 
-#### **!help / !info**
+#### **!help**
 ```bash
 !help
-!info
-# Informações do sistema
 # Lista de comandos disponíveis
+# Informações do sistema
 ```
-**Status:** ✅ **100% FUNCIONAL**
+**Status:** ✅ **100% FUNCIONAL (CORRIGIDO)**
+
+#### **!test**
+```bash
+!test
+# Teste básico de resposta
+# Verifica funcionamento
+```
+**Status:** ✅ **100% FUNCIONAL (CORRIGIDO)**
+
+#### **!info**
+```bash
+!info
+# Informações detalhadas da mensagem
+# Metadados do chat
+```
+**Status:** ✅ **100% FUNCIONAL (CORRIGIDO)**
+
+#### **!bemvindo**
+```bash
+!bemvindo
+# Mensagem de boas-vindas
+# Informações do grupo
+```
+**Status:** ✅ **100% FUNCIONAL (CORRIGIDO)**
+
+#### **!admin**
+```bash
+!admin
+# Painel administrativo
+# Status do sistema
+```
+**Status:** ✅ **100% FUNCIONAL (CORRIGIDO)**
 
 ---
 
@@ -257,24 +338,38 @@ CLEANUP_INTERVAL: 300000ms     // 5 minutos
 STORAGE_TYPE: 'object'         // Objeto simples
 ```
 
-### **📁 Estrutura de Arquivos:**
+### **📁 Estrutura de Arquivos (ATUALIZADA):**
 ```
 bot-wpp/
 ├── commands/
-│   ├── ondeestou.js          # Sistema de localização
-│   ├── testrelay.js          # Teste de comunicação
-│   ├── ping.js              # Verificação de status
-│   ├── help.js              # Ajuda do sistema
-│   └── info.js              # Informações
+│   ├── ondeestou.js          # Sistema de localização (FUNCIONAL)
+│   ├── testrelay.js          # Teste de comunicação (FUNCIONAL)
+│   ├── ping.js              # Verificação de status (FUNCIONAL)
+│   ├── help.js              # Ajuda do sistema (FUNCIONAL)
+│   ├── test.js              # Teste básico (FUNCIONAL)
+│   ├── info.js              # Informações (FUNCIONAL)
+│   ├── bemvindo.js          # Boas-vindas (FUNCIONAL)
+│   ├── admin.js             # Painel admin (FUNCIONAL)
+│   ├── ondeestou-simple.js  # Versão simplificada
+│   ├── admin-simple.js      # Versão simplificada
+│   └── help-clean.js        # Versão limpa
+├── config/
+│   └── license.js           # Sistema de licenciamento (PAUSADO)
+├── data/
+│   └── users.json           # Controle de usuários (PAUSADO)
 ├── relay/
-│   └── server.js            # Relay no Render
+│   └── server.js            # Relay no Render (FUNCIONAL)
 ├── public/
-│   └── location.html        # Frontend de GPS
-├── whatsapp.js              # Bot principal
-├── autotest.js              # Sistema de testes
-├── run_autotest.js          # Workflow completo
+│   └── location.html        # Frontend de GPS (FUNCIONAL)
+├── start-qr.js              # Bot principal com QR limitado (FUNCIONAL)
+├── start-minimal.js         # Bot mínimo (BACKUP)
+├── test-comandos.js         # Sistema de autotest (FUNCIONAL)
+├── test-comandos-reais.js   # Autotest real (FUNCIONAL)
+├── deploy-linux.sh          # Script deploy Linux (FUNCIONAL)
+├── .env.example             # Exemplo de variáveis (PAUSADO)
+├── setup-inicial.md         # Guia setup (PAUSADO)
 ├── INSTRUCOES_CASA.md       # Guia para casa
-└── STATUS.md                # Este arquivo
+└── STATUS.md                # Este arquivo (ATUALIZADO)
 ```
 
 ---
@@ -300,6 +395,26 @@ bot-wpp/
 ### **❌ "Polling infinito"**
 **Causa:** setInterval acumulando requisições  
 **Solução:** Usar setTimeout recursivo
+
+### **❌ "Comandos não funcionando" (28/04/2026)**
+**Causa:** Arquivos corrompidos durante transferência para Linux  
+**Sintomas:** "Cannot read properties of undefined", "values", "sendText"  
+**Solução:** Reenviar arquivos limpos do Windows para Linux
+
+### **❌ "Timeout do Puppeteer" (28/04/2026)**
+**Causa:** Contexto destruído por navegação interna  
+**Sintomas:** "Runtime.callFunctionOn timed out", "Execution context was destroyed"  
+**Solução:** Aumentar protocolTimeout para 60 segundos
+
+### **❌ "Cache corrompido" (28/04/2026)**
+**Causa:** Sessão WhatsApp corrompida após múltiplos restarts  
+**Sintomas:** Bot não conectava, ficava em loop  
+**Solução:** Limpar .wwebjs_auth e .wwebjs_cache
+
+### **❌ "Dependências quebradas" (28/04/2026)**
+**Causa:** Comandos !admin e !ondeestou com require('../config/license')  
+**Sintomas:** "Cannot find module '../config/license'"  
+**Solução:** Criar versões simplificadas sem dependências
 
 ---
 
