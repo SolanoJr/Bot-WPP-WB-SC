@@ -1,14 +1,38 @@
 const axios = require('axios');
+const LicenseManager = require('../config/license');
 
 module.exports = {
     name: 'ondeestou',
     description: 'Solicita a localização em tempo real',
     async execute(msg, client, args) {
         try {
+            // 🔐 Verificar licença e autorização
+            const license = new LicenseManager();
+            
+            if (!license.validateLicense()) {
+                await msg.reply('❌ Sistema não licenciado. Contate o administrador.');
+                return;
+            }
+            
+            // 👥 Verificar autorização do usuário
+            if (!license.isUserAuthorized(msg.from)) {
+                await msg.reply('❌ Usuário não autorizado. Entre em contato com o suporte.');
+                return;
+            }
+            
+            // 🎯 Verificar permissão do comando
+            if (!license.hasPermission(msg.from, 'ondeestou')) {
+                await msg.reply('❌ Você não tem permissão para usar este comando.');
+                return;
+            }
+            
+            // 📊 Registrar uso
+            license.registerUsage(msg.from, 'ondeestou');
+            
             const chatId = msg.from;
             // Usando o seu serviço de Relay no Render
-            const RELAY_URL = 'https://bot-wpp-relay.onrender.com';
-            const INTERFACE_URL = 'https://bot-wpp-wb-sc.pages.dev';
+            const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
+            const INTERFACE_URL = process.env.FRONTEND_URL || 'https://bot-wpp-wb-sc.pages.dev';
 
             const token = `loc_${Date.now()}_${Math.random().toString(36).substring(7)}`;
             const trackingLink = `${INTERFACE_URL}?token=${token}&chatId=${chatId}&relay=${RELAY_URL}`;
@@ -18,7 +42,7 @@ module.exports = {
             console.log(`✅ Link de rastro enviado para ${chatId}`);
             
             // Iniciar polling para buscar localização
-            this.startLocationPolling(msg, chatId, token, RELAY_URL);
+            this.startLocationPolling(msg, chatId, token, RELAY_URL, license);
             
         } catch (error) {
             console.error('Erro no ondeestou:', error.message);
