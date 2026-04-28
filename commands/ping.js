@@ -1,11 +1,8 @@
 module.exports = {
     name: 'ping',
-    description: 'Responde com pong para validar se o bot esta ativo.',
-
-    async execute(msg, args, context) {
-        void msg;
-        void args;
-
-        await context.replyService.sendText(context, 'pong');
+    description: 'Verifica se o bot está online',
+    async execute(msg, client, args) {
+        // Ajustado para usar msg.reply que é o padrão do whatsapp-web.js
+        await msg.reply('pong 🏓');
     }
 };
