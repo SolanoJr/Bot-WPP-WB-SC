@@ -9,7 +9,9 @@
     "dev": "nodemon backend/app.js",
     "mock:license": "node mock-license-api.js",
     "mock:control": "node mock-license-api.js",
-    "test": "jest --runInBand --testPathIgnorePatterns=commands"
+    "test": "jest --runInBand --testPathIgnorePatterns=commands",
+    "autotest": "node autotest.js",
+    "test:workflow": "node run_autotest.js"
   },
   "keywords": [],
   "author": "",

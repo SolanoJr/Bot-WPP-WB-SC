@@ -1,0 +1,110 @@
+{
+  "timestamp": "2026-04-28T15:16:58.488Z",
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "successRate": 100
+  },
+  "results": [
+    {
+      "test": "Relay Health",
+      "status": "✅ PASS",
+      "details": {
+        "health": {
+          "ok": true,
+          "service": "bot-wpp-relay",
+          "timestamp": "2026-04-28T15:17:03.632Z",
+          "backend": "http://100.101.218.16:4010"
+        },
+        "ping": {
+          "pong": true,
+          "service": "bot-wpp-relay",
+          "timestamp": "2026-04-28T15:17:03.929Z",
+          "uptime": 1599.245721519
+        },
+        "responseTime": 1777389417574
+      }
+    },
+    {
+      "test": "Relay Communication",
+      "status": "✅ PASS",
+      "details": {
+        "postResponse": {
+          "success": true,
+          "message": "Localização recebida e armazenada"
+        },
+        "getResponse": {
+          "token": "test-1777389417575",
+          "chatId": "autotest-1777389417575",
+          "location": {
+            "latitude": -23.5505,
+            "longitude": -46.6333,
+            "accuracy": 10
+          },
+          "userAgent": "AutoTest-System",
+          "timestamp": "2026-04-28T15:16:57.575Z",
+          "receivedAt": "2026-04-28T15:17:04.182Z"
+        },
+        "testData": {
+          "token": "test-1777389417575",
+          "chatId": "autotest-1777389417575",
+          "location": {
+            "latitude": -23.5505,
+            "longitude": -46.6333,
+            "accuracy": 10
+          },
+          "userAgent": "AutoTest-System",
+          "timestamp": "2026-04-28T15:16:57.575Z"
+        }
+      }
+    },
+    {
+      "test": "Location Formatting",
+      "status": "✅ PASS",
+      "details": {
+        "checks": [
+          {
+            "name": "Título formatado",
+            "passed": true
+          },
+          {
+            "name": "Nome do contato",
+            "passed": true
+          },
+          {
+            "name": "Latitude formatada",
+            "passed": true
+          },
+          {
+            "name": "Longitude formatada",
+            "passed": true
+          },
+          {
+            "name": "Link Google Maps",
+            "passed": true
+          },
+          {
+            "name": "Polling implementado",
+            "passed": true
+          }
+        ],
+        "failedChecks": []
+      }
+    },
+    {
+      "test": "Bot Polling",
+      "status": "✅ PASS",
+      "details": {
+        "botStatus": {
+          "online": true,
+          "method": "assumed"
+        },
+        "logsStatus": {
+          "hasRecentActivity": true,
+          "lastActivity": "2026-04-28T15:16:58.486Z"
+        }
+      }
+    }
+  ]
+}
