@@ -2,10 +2,9 @@ module.exports = {
     name: 'test',
     description: 'Confirma que o comando de teste esta funcionando.',
 
-    async execute(msg, args, context) {
-        void msg;
+    async execute(msg, client, args) {
         void args;
 
-        await context.replyService.sendText(context, 'comando test funcionando');
+        await msg.reply('✅ Comando test funcionando!');
     }
 };

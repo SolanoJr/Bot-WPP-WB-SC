@@ -2,22 +2,18 @@ module.exports = {
     name: 'info',
     description: 'Mostra dados do contexto atual da mensagem.',
 
-    async execute(msg, args, context) {
-        void msg;
-        void args;
-
-        const chatId =
-            context.message?.from ||
-            context.message?.to ||
-            context.message?.id?.remote ||
-            'chat-desconhecido';
-
-        const totalArgs = Array.isArray(context.args) ? context.args.length : 0;
+    async execute(msg, client, args) {
+        const chatId = msg.from || 'chat-desconhecido';
+        const timestamp = new Date().toLocaleString('pt-BR');
+        const totalArgs = args.length;
+        
         const response =
-            `horario atual: ${context.timestamp}\n` +
-            `id do chat: ${chatId}\n` +
-            `numero de argumentos recebidos: ${totalArgs}`;
+            `📋 **Informações da Mensagem:**\n\n` +
+            `⏰ Horário atual: ${timestamp}\n` +
+            `💬 ID do chat: ${chatId}\n` +
+            `📝 Número de argumentos: ${totalArgs}\n` +
+            `🤖 Bot: WhatsApp Bot v1.0`;
 
-        await context.replyService.sendText(context, response);
+        await msg.reply(response);
     }
 };
