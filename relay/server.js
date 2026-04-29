@@ -54,16 +54,17 @@ const initializeDatabase = () => {
             userAgent TEXT,
             receivedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
             processed BOOLEAN DEFAULT FALSE,
-            processedAt DATETIME,
-            INDEX(chatId),
-            INDEX(token),
-            INDEX(processed)
+            processedAt DATETIME
         )
     `, (err) => {
         if (err) {
             console.error('❌ [DATABASE] Erro ao criar tabela locations:', err);
         } else {
             console.log('✅ [DATABASE] Tabela locations criada/verificada');
+            // Criar índices separadamente
+            db.run(`CREATE INDEX IF NOT EXISTS idx_locations_chatId ON locations(chatId)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_locations_token ON locations(token)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_locations_processed ON locations(processed)`);
         }
     });
 
@@ -77,15 +78,15 @@ const initializeDatabase = () => {
             firstSeen DATETIME DEFAULT CURRENT_TIMESTAMP,
             lastSeen DATETIME DEFAULT CURRENT_TIMESTAMP,
             totalLocations INTEGER DEFAULT 0,
-            isActive BOOLEAN DEFAULT TRUE,
-            INDEX(chatId),
-            INDEX(isActive)
+            isActive BOOLEAN DEFAULT TRUE
         )
     `, (err) => {
         if (err) {
             console.error('❌ [DATABASE] Erro ao criar tabela clients:', err);
         } else {
             console.log('✅ [DATABASE] Tabela clients criada/verificada');
+            db.run(`CREATE INDEX IF NOT EXISTS idx_clients_chatId ON clients(chatId)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_clients_isActive ON clients(isActive)`);
         }
     });
 
@@ -100,15 +101,15 @@ const initializeDatabase = () => {
             customCommands TEXT,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
             lastActivity DATETIME DEFAULT CURRENT_TIMESTAMP,
-            isActive BOOLEAN DEFAULT TRUE,
-            INDEX(groupId),
-            INDEX(isActive)
+            isActive BOOLEAN DEFAULT TRUE
         )
     `, (err) => {
         if (err) {
             console.error('❌ [DATABASE] Erro ao criar tabela groups:', err);
         } else {
             console.log('✅ [DATABASE] Tabela groups criada/verificada');
+            db.run(`CREATE INDEX IF NOT EXISTS idx_groups_groupId ON groups(groupId)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_groups_isActive ON groups(isActive)`);
         }
     });
 
@@ -120,16 +121,16 @@ const initializeDatabase = () => {
             type TEXT NOT NULL, -- 'location', 'error', 'success', 'user_feedback'
             message TEXT,
             data TEXT, -- JSON com dados adicionais
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            INDEX(chatId),
-            INDEX(type),
-            INDEX(timestamp)
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `, (err) => {
         if (err) {
             console.error('❌ [DATABASE] Erro ao criar tabela feedbacks:', err);
         } else {
             console.log('✅ [DATABASE] Tabela feedbacks criada/verificada');
+            db.run(`CREATE INDEX IF NOT EXISTS idx_feedbacks_chatId ON feedbacks(chatId)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_feedbacks_type ON feedbacks(type)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_feedbacks_timestamp ON feedbacks(timestamp)`);
         }
     });
 
@@ -140,14 +141,14 @@ const initializeDatabase = () => {
             botNumber TEXT NOT NULL,
             botName TEXT,
             version TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            INDEX(botNumber)
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `, (err) => {
         if (err) {
             console.error('❌ [DATABASE] Erro ao criar tabela telemetry:', err);
         } else {
             console.log('✅ [DATABASE] Tabela telemetry criada/verificada');
+            db.run(`CREATE INDEX IF NOT EXISTS idx_telemetry_botNumber ON telemetry(botNumber)`);
         }
     });
 

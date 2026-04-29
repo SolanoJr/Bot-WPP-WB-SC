@@ -37,7 +37,11 @@ module.exports = {
                 throw new Error('Falha na resposta do servidor.');
             }
         } catch (error) {
-            console.error('❌ Erro ao enviar feedback:', error.message);
+            if (error.response) {
+                console.error(`❌ Erro HTTP ${error.response.status} ao enviar feedback:`, error.response.data);
+            } else {
+                console.error('❌ Erro ao enviar feedback:', error.message);
+            }
             await msg.reply('⚠️ Ocorreu um erro ao enviar seu feedback. Tente novamente mais tarde.');
         }
     }
