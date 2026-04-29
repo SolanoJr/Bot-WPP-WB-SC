@@ -225,11 +225,17 @@
 - ✅ **Novos Endpoints do Relay:**
   - `POST /telemetry` para ativação do bot (envio no evento ready)
   - `GET /groups/:groupId/config` para buscar configs dinâmicas
+  - `POST /groups/:groupId/config` para salvar/atualizar configs (boas-vindas, etc)
   - `POST /feedback` para salvar sugestões na base
+  - `GET /stats` para métricas gerais do SQLite
 - ✅ **Novos Comandos & Refatoração:**
-  - Refatorado `!bemvindo` para buscar regras do SQLite
+  - Refatorado `!bemvindo` com fallback para resiliência (timeout/erro)
+  - Criado `!setwelcome` para configurar mensagens via banco (Admin/Master)
+  - Criado `!stats` para visualização de métricas (Master)
   - Criado `!feedback` para postar diretamente no Relay
-  - Lógica para interpretar comandos dinâmicos/customizados por grupo (`whatsapp.js`)
+- ✅ **Segurança:**
+  - Implementado middleware `checkApiKey` no Relay
+  - Bot configurado para enviar `x-api-key` em todos os headers
 - ✅ **Testes Automatizados de Comandos:**
   - Criado `tests/pre_validation.js` simulando a entrada do WhatsApp para rodar os comandos sem disparar a API
 
@@ -316,6 +322,26 @@
 ```bash
 !feedback [mensagem]
 # Envia um feedback diretamente para o SQLite do Relay
+```
+
+**Status:** ✅ **100% FUNCIONAL**
+
+#### **!setwelcome (NOVO)**
+
+```bash
+!setwelcome [texto]
+# Altera a mensagem de boas-vindas do grupo no banco
+# Permissão: Admin do Grupo ou Master
+```
+
+**Status:** ✅ **100% FUNCIONAL**
+
+#### **!stats (NOVO)**
+
+```bash
+!stats
+# Exibe contagem de grupos, feedbacks e localizações
+# Permissão: Master
 ```
 
 **Status:** ✅ **100% FUNCIONAL**
