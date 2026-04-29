@@ -99,6 +99,7 @@ const initializeDatabase = () => {
             participants INTEGER DEFAULT 0,
             welcomeMessage TEXT,
             customCommands TEXT,
+            antispamActive INTEGER DEFAULT 0,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
             lastActivity DATETIME DEFAULT CURRENT_TIMESTAMP,
             isActive BOOLEAN DEFAULT TRUE
@@ -110,6 +111,32 @@ const initializeDatabase = () => {
             console.log('✅ [DATABASE] Tabela groups criada/verificada');
             db.run(`CREATE INDEX IF NOT EXISTS idx_groups_groupId ON groups(groupId)`);
             db.run(`CREATE INDEX IF NOT EXISTS idx_groups_isActive ON groups(isActive)`);
+            
+            // Garantir que a coluna antispamActive existe (caso a tabela já existisse)
+            db.run(`ALTER TABLE groups ADD COLUMN antispamActive INTEGER DEFAULT 0`, (err) => {
+                if (err) {
+                    // Ignorar erro se a coluna já existe
+                    if (!err.message.includes('duplicate column name')) {
+                        console.log('ℹ️ Nota: Coluna antispamActive já existe ou não pôde ser criada.');
+                    }
+                }
+            });
+        }
+    });
+
+    // Tabela de banimentos (Antispam)
+    db.run(`
+        CREATE TABLE IF NOT EXISTS bans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            groupId TEXT NOT NULL,
+            userId TEXT NOT NULL,
+            reason TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (err) => {
+        if (!err) {
+            db.run(`CREATE INDEX IF NOT EXISTS idx_bans_groupId ON bans(groupId)`);
+            db.run(`CREATE INDEX IF NOT EXISTS idx_bans_userId ON bans(userId)`);
         }
     });
 
@@ -368,7 +395,7 @@ app.get('/groups/:groupId/config', checkApiKey, (req, res) => {
         const groupId = req.params.groupId;
         if (!groupId) return res.status(400).json({ success: false });
 
-        db.get('SELECT welcomeMessage, customCommands FROM groups WHERE groupId = ?', [groupId], (err, row) => {
+        db.get('SELECT welcomeMessage, customCommands, antispamActive FROM groups WHERE groupId = ?', [groupId], (err, row) => {
             if (err) {
                 console.error('❌ [DATABASE] Erro ao buscar config:', err);
                 return res.status(500).json({ success: false });
@@ -378,14 +405,16 @@ app.get('/groups/:groupId/config', checkApiKey, (req, res) => {
                 return res.json({ 
                     success: true, 
                     welcomeMessage: null, 
-                    customCommands: null 
+                    customCommands: null,
+                    antispamActive: 0
                 });
             }
 
             res.json({
                 success: true,
                 welcomeMessage: row.welcomeMessage,
-                customCommands: row.customCommands ? JSON.parse(row.customCommands) : null
+                customCommands: row.customCommands ? JSON.parse(row.customCommands) : null,
+                antispamActive: row.antispamActive || 0
             });
         });
     } catch (error) {
@@ -398,25 +427,27 @@ app.get('/groups/:groupId/config', checkApiKey, (req, res) => {
 app.post('/groups/:groupId/config', checkApiKey, (req, res) => {
     try {
         const groupId = req.params.groupId;
-        const { welcomeMessage, customCommands, name } = req.body;
+        const { welcomeMessage, customCommands, name, antispamActive } = req.body;
 
         if (!groupId) return res.status(400).json({ success: false });
 
-        // Usar INSERT OR REPLACE para simplificar
         db.run(`
-            INSERT INTO groups (groupId, name, welcomeMessage, customCommands, lastActivity)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO groups (groupId, name, welcomeMessage, customCommands, antispamActive, lastActivity)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(groupId) DO UPDATE SET
                 welcomeMessage = COALESCE(?, welcomeMessage),
                 customCommands = COALESCE(?, customCommands),
                 name = COALESCE(?, name),
+                antispamActive = COALESCE(?, antispamActive),
                 lastActivity = CURRENT_TIMESTAMP
         `, [
             groupId, name || 'Grupo', welcomeMessage, 
             customCommands ? JSON.stringify(customCommands) : null,
+            antispamActive,
             welcomeMessage,
             customCommands ? JSON.stringify(customCommands) : null,
-            name
+            name,
+            antispamActive
         ], function(err) {
             if (err) {
                 console.error('❌ [DATABASE] Erro ao salvar config de grupo:', err);
@@ -470,13 +501,39 @@ app.get('/stats', checkApiKey, (req, res) => {
                     
                     db.get('SELECT COUNT(*) as count FROM clients WHERE isActive = 1', (err, row) => {
                         stats.totalClients = row ? row.count : 0;
-                        res.json({ success: true, stats });
+                        
+                        db.get('SELECT COUNT(*) as count FROM bans', (err, row) => {
+                            stats.totalBans = row ? row.count : 0;
+                            res.json({ success: true, stats });
+                        });
                     });
                 });
             });
         });
     } catch (error) {
         console.error('❌ Erro no /stats:', error);
+        res.status(500).json({ success: false });
+    }
+});
+
+// Endpoint para registrar banimentos (Antispam)
+app.post('/bans', checkApiKey, (req, res) => {
+    try {
+        const { groupId, userId, reason } = req.body;
+        if (!groupId || !userId) return res.status(400).json({ success: false });
+
+        db.run(`
+            INSERT INTO bans (groupId, userId, reason)
+            VALUES (?, ?, ?)
+        `, [groupId, userId, reason], function(err) {
+            if (err) {
+                console.error('❌ [DATABASE] Erro ao salvar ban:', err);
+                return res.status(500).json({ success: false });
+            }
+            res.json({ success: true, banId: this.lastID });
+        });
+    } catch (error) {
+        console.error('❌ Erro no /bans:', error);
         res.status(500).json({ success: false });
     }
 });

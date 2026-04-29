@@ -224,18 +224,23 @@
   - Tabelas: `locations`, `clients`, `groups`, `feedbacks`, `telemetry`
 - ✅ **Novos Endpoints do Relay:**
   - `POST /telemetry` para ativação do bot (envio no evento ready)
-  - `GET /groups/:groupId/config` para buscar configs dinâmicas
-  - `POST /groups/:groupId/config` para salvar/atualizar configs (boas-vindas, etc)
+  - `GET /groups/:groupId/config` para buscar configs dinâmicas (incluindo Antispam)
+  - `POST /groups/:groupId/config` para salvar/atualizar configs (boas-vindas, antispam, etc)
   - `POST /feedback` para salvar sugestões na base
-  - `GET /stats` para métricas gerais do SQLite
+  - `GET /stats` para métricas gerais do SQLite (agora com total de Bans)
+  - `POST /bans` para registro de punições automáticas
 - ✅ **Novos Comandos & Refatoração:**
   - Refatorado `!bemvindo` com fallback para resiliência (timeout/erro)
   - Criado `!setwelcome` para configurar mensagens via banco (Admin/Master)
+  - Criado `!antispam [on/off]` para moderação automática (Admin/Master)
+  - Criado `!grupos` para listagem de instâncias ativas (Master)
   - Criado `!stats` para visualização de métricas (Master)
   - Criado `!feedback` para postar diretamente no Relay
-- ✅ **Segurança:**
+- ✅ **Segurança & Antispam:**
   - Implementado middleware `checkApiKey` no Relay
-  - Bot configurado para enviar `x-api-key` em todos os headers
+  - **Módulo Antispam:** Detecção automática de links e palavras proibidas (tigrinho, pix, etc)
+  - **Punição Automática:** Remoção (Ban) de membros que postam spam (se bot for ADM)
+  - **Keep-Alive:** Ping automático a cada 12 horas para manter Relay ativo
 - ✅ **Testes Automatizados de Comandos:**
   - Criado `tests/pre_validation.js` simulando a entrada do WhatsApp para rodar os comandos sem disparar a API
 
@@ -340,7 +345,27 @@
 
 ```bash
 !stats
-# Exibe contagem de grupos, feedbacks e localizações
+# Exibe contagem de grupos, feedbacks, bans e localizações
+# Permissão: Master
+```
+
+**Status:** ✅ **100% FUNCIONAL**
+
+#### **!antispam (NOVO)**
+
+```bash
+!antispam [on/off]
+# Ativa proteção contra links e palavras proibidas
+# Permissão: Admin do Grupo ou Master
+```
+
+**Status:** ✅ **100% FUNCIONAL**
+
+#### **!grupos (NOVO)**
+
+```bash
+!grupos
+# Lista todos os grupos onde o bot está e seu status de ADM
 # Permissão: Master
 ```
 

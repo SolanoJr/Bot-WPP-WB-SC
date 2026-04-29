@@ -97,6 +97,71 @@ const initializeClient = async () => {
         
         // Configurar eventos de mensagem APÓS client estar disponível
         client.on('message', async (msg) => {
+            const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
+            
+            // 🛡️ LÓGICA DE ANTISPAM
+            if (msg.from.endsWith('@g.us')) {
+                try {
+                    const chat = await msg.getChat();
+                    const groupId = chat.id._serialized;
+                    
+                    // Buscar config do grupo (com cache simples de 1 min seria ideal, mas vamos direto por enquanto)
+                    const configRes = await axios.get(`${RELAY_URL}/groups/${encodeURIComponent(groupId)}/config`, {
+                        headers: { 'x-api-key': process.env.API_KEY || '' },
+                        timeout: 3000
+                    }).catch(() => null);
+
+                    if (configRes && configRes.data && configRes.data.antispamActive === 1) {
+                        const authorId = msg.author || msg.from;
+                        
+                        // Verificar se autor NÃO é admin e bot É admin
+                        const contact = await msg.getContact();
+                        const member = chat.participants.find(p => p.id._serialized === authorId);
+                        const isAuthorAdmin = member && (member.isAdmin || member.isSuperAdmin);
+                        
+                        const botMember = chat.participants.find(p => p.id.user === client.info.wid.user);
+                        const isBotAdmin = botMember && (botMember.isAdmin || botMember.isSuperAdmin);
+
+                        if (!isAuthorAdmin && isBotAdmin) {
+                            const body = msg.body.toLowerCase();
+                            const hasLink = /(https?:\/\/|wa\.me|t\.me|bit\.ly|tinyurl\.com|goo\.gl|u\.to)/gi.test(body);
+                            const forbiddenWords = ['tigrinho', 'aposta', 'pix', 'bet', 'cassino'];
+                            const hasForbiddenWord = forbiddenWords.some(word => body.includes(word));
+
+                            // Caso 1: Palavra Proibida + Link = BAN
+                            if (hasLink && hasForbiddenWord) {
+                                console.log(`🚫 [ANTISPAM] Banindo ${authorId} por link e palavra proibida.`);
+                                await msg.delete(true);
+                                await chat.removeParticipants([authorId]);
+                                await chat.sendMessage(`🚫 @${authorId.split('@')[0]} foi banido automaticamente por spam (Link + Palavra Proibida).`, {
+                                    mentions: [authorId]
+                                });
+                                
+                                // Registrar banimento no Relay
+                                await axios.post(`${RELAY_URL}/bans`, {
+                                    groupId,
+                                    userId: authorId,
+                                    reason: `Link + Palavra Proibida: ${body.substring(0, 100)}`
+                                }, { headers: { 'x-api-key': process.env.API_KEY || '' } }).catch(() => {});
+                                return;
+                            }
+
+                            // Caso 2: Apenas Link = DELETE
+                            if (hasLink) {
+                                console.log(`🚫 [ANTISPAM] Removendo link de ${authorId}`);
+                                await msg.delete(true);
+                                await chat.sendMessage(`🚫 @${authorId.split('@')[0]}, links não são permitidos neste grupo.`, {
+                                    mentions: [authorId]
+                                });
+                                return;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('❌ Erro no processamento de Antispam:', e.message);
+                }
+            }
+
             if (!msg.body.startsWith(COMMAND_PREFIX)) return;
 
             const args = msg.body.slice(COMMAND_PREFIX.length).trim().split(/ +/);
@@ -163,6 +228,39 @@ const initializeClient = async () => {
                 console.log(`⚠️ [TELEMETRY] Erro ao enviar dados ao Relay: ${error.message}`);
             }
         });
+
+        // 🔗 TELEMETRIA DE ENTRADA EM GRUPO
+        client.on('group_join', async (notification) => {
+            try {
+                // Se o próprio bot entrou
+                if (notification.recipientIds.includes(client.info.wid._serialized)) {
+                    const chat = await client.getChatById(notification.chatId);
+                    const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
+                    
+                    console.log(`🆕 [GROUP] Bot entrou no grupo: ${chat.name}`);
+                    
+                    await axios.post(`${RELAY_URL}/groups/${encodeURIComponent(chat.id._serialized)}/config`, {
+                        name: chat.name,
+                        isActive: 1
+                    }, {
+                        headers: { 'x-api-key': process.env.API_KEY || '' }
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Erro na telemetria de grupo:', error.message);
+            }
+        });
+
+        // 🔄 KEEP-ALIVE AVANÇADO (Ping a cada 12 horas)
+        setInterval(async () => {
+            try {
+                const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
+                console.log('💓 [KEEP-ALIVE] Enviando ping para o Relay...');
+                await axios.get(`${RELAY_URL}/health`).catch(() => {});
+            } catch (e) {
+                console.error('❌ [KEEP-ALIVE] Falha no ping:', e.message);
+            }
+        }, 12 * 60 * 60 * 1000); // 12 horas
 
         // Inicializar o client
         client.initialize();
