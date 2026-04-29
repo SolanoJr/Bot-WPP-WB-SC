@@ -368,36 +368,64 @@ app.get('/groups/:groupId/config', checkApiKey, (req, res) => {
         const groupId = req.params.groupId;
         if (!groupId) return res.status(400).json({ success: false });
 
-        db.get(`
-            SELECT welcomeMessage, customCommands
-            FROM groups
-            WHERE groupId = ?
-        `, [groupId], (err, row) => {
+        db.get('SELECT welcomeMessage, customCommands FROM groups WHERE groupId = ?', [groupId], (err, row) => {
             if (err) {
-                console.error('❌ [DATABASE] Erro ao buscar config de grupo:', err);
+                console.error('❌ [DATABASE] Erro ao buscar config:', err);
                 return res.status(500).json({ success: false });
             }
             
             if (!row) {
-                // Retorna um default vazio se não existir
-                return res.json({ success: true, welcomeMessage: null, customCommands: null });
-            }
-
-            let parsedCommands = null;
-            if (row.customCommands) {
-                try {
-                    parsedCommands = JSON.parse(row.customCommands);
-                } catch(e) {}
+                return res.json({ 
+                    success: true, 
+                    welcomeMessage: null, 
+                    customCommands: null 
+                });
             }
 
             res.json({
                 success: true,
                 welcomeMessage: row.welcomeMessage,
-                customCommands: parsedCommands
+                customCommands: row.customCommands ? JSON.parse(row.customCommands) : null
             });
         });
     } catch (error) {
         console.error('❌ Erro no /groups/config:', error);
+        res.status(500).json({ success: false });
+    }
+});
+
+// Endpoint para salvar/atualizar configurações de grupo (com Auth)
+app.post('/groups/:groupId/config', checkApiKey, (req, res) => {
+    try {
+        const groupId = req.params.groupId;
+        const { welcomeMessage, customCommands, name } = req.body;
+
+        if (!groupId) return res.status(400).json({ success: false });
+
+        // Usar INSERT OR REPLACE para simplificar
+        db.run(`
+            INSERT INTO groups (groupId, name, welcomeMessage, customCommands, lastActivity)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(groupId) DO UPDATE SET
+                welcomeMessage = COALESCE(?, welcomeMessage),
+                customCommands = COALESCE(?, customCommands),
+                name = COALESCE(?, name),
+                lastActivity = CURRENT_TIMESTAMP
+        `, [
+            groupId, name || 'Grupo', welcomeMessage, 
+            customCommands ? JSON.stringify(customCommands) : null,
+            welcomeMessage,
+            customCommands ? JSON.stringify(customCommands) : null,
+            name
+        ], function(err) {
+            if (err) {
+                console.error('❌ [DATABASE] Erro ao salvar config de grupo:', err);
+                return res.status(500).json({ success: false });
+            }
+            res.json({ success: true });
+        });
+    } catch (error) {
+        console.error('❌ Erro no POST /groups/config:', error);
         res.status(500).json({ success: false });
     }
 });
@@ -407,7 +435,7 @@ app.post('/feedback', checkApiKey, (req, res) => {
     try {
         const { chatId, message, data } = req.body;
         if (!chatId || !message) {
-            return res.status(400).json({ success: false, message: 'chatId e message são obrigatórios' });
+            return res.status(400).json({ success: false, message: 'Dados incompletos' });
         }
 
         db.run(`
@@ -418,11 +446,37 @@ app.post('/feedback', checkApiKey, (req, res) => {
                 console.error('❌ [DATABASE] Erro ao salvar feedback:', err);
                 return res.status(500).json({ success: false });
             }
-            console.log(`📝 [FEEDBACK] Recebido de ${chatId}: ${message}`);
-            res.json({ success: true, feedbackId: this.lastID });
+            res.json({ success: true, id: this.lastID });
         });
     } catch (error) {
         console.error('❌ Erro no /feedback:', error);
+        res.status(500).json({ success: false, message: 'Erro interno' });
+    }
+});
+
+// Endpoint de Estatísticas (com Auth)
+app.get('/stats', checkApiKey, (req, res) => {
+    try {
+        const stats = {};
+        
+        db.get('SELECT COUNT(*) as count FROM feedbacks', (err, row) => {
+            stats.totalFeedbacks = row ? row.count : 0;
+            
+            db.get('SELECT COUNT(*) as count FROM groups WHERE isActive = 1', (err, row) => {
+                stats.totalGroups = row ? row.count : 0;
+                
+                db.get('SELECT COUNT(*) as count FROM locations', (err, row) => {
+                    stats.totalLocations = row ? row.count : 0;
+                    
+                    db.get('SELECT COUNT(*) as count FROM clients WHERE isActive = 1', (err, row) => {
+                        stats.totalClients = row ? row.count : 0;
+                        res.json({ success: true, stats });
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('❌ Erro no /stats:', error);
         res.status(500).json({ success: false });
     }
 });

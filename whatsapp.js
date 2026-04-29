@@ -119,19 +119,20 @@ const initializeClient = async () => {
                         const groupId = chat.id._serialized;
                         const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
                         const response = await axios.get(`${RELAY_URL}/groups/${encodeURIComponent(groupId)}/config`, {
-                            headers: { 'x-api-key': process.env.API_KEY || '' }
+                            headers: { 'x-api-key': process.env.API_KEY || '' },
+                            timeout: 5000 // Timeout de 5 segundos para resiliência
                         });
                         
                         if (response.data.success && response.data.customCommands) {
                             const customCommands = response.data.customCommands;
-                            // Se o comando existe no JSON
                             if (customCommands[commandName]) {
                                 await msg.reply(customCommands[commandName]);
                             }
                         }
                     }
                 } catch (error) {
-                    console.error(`Erro ao checar comando customizado ${commandName}:`, error.message);
+                    // Silencioso para não poluir o console do bot em caso de instabilidade no Relay
+                    console.log(`ℹ️ Relay indisponível para comando customizado ${commandName}.`);
                 }
             }
         });

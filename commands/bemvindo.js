@@ -24,23 +24,32 @@ module.exports = {
             });
             const data = response.data;
 
+            const defaultResponse = [
+                '👋 **BEM-VINDO AO GRUPO!**',
+                '',
+                '🤖 **Comandos Disponíveis:**',
+                '• !help - Lista todos os comandos',
+                '• !ondeestou - Verifica sua localização',
+                '• !ping - Testar conexão'
+            ].join('\n');
+
             if (data.success && data.welcomeMessage) {
                 await msg.reply(data.welcomeMessage);
             } else {
-                // Mensagem padrão caso não tenha no banco
-                const defaultResponse = [
-                    '👋 **BEM-VINDO AO GRUPO!**',
-                    '',
-                    '🤖 **Comandos Disponíveis:**',
-                    '• !help - Lista todos os comandos',
-                    '• !ondeestou - Verifica sua localização',
-                    '• !ping - Testar conexão'
-                ].join('\n');
                 await msg.reply(defaultResponse);
             }
         } catch (error) {
             console.error('❌ Erro ao buscar bemvindo:', error.message);
-            await msg.reply('⚠️ Não consegui buscar as regras do grupo no momento.');
+            // Fallback total para garantir que o bot responda
+            const defaultResponse = [
+                '👋 **BEM-VINDO AO GRUPO!**',
+                '',
+                '🤖 **Comandos Disponíveis:**',
+                '• !help - Lista todos os comandos',
+                '• !ondeestou - Verifica sua localização',
+                '• !ping - Testar conexão'
+            ].join('\n');
+            await msg.reply(defaultResponse);
         }
     }
 };
