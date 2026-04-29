@@ -29,7 +29,10 @@ module.exports = {
                 const botIdClean = cleanId(client.info.wid._serialized);
                 
                 const botMember = group.participants.find(p => cleanId(p.id._serialized) === botIdClean);
-                const isBotAdmin = botMember && (botMember.isAdmin || botMember.isSuperAdmin);
+                const isBotAdmin = botMember && (member => member.isAdmin || member.isSuperAdmin)(botMember);
+
+                // LOG SOLICITADO PELO USUÁRIO
+                console.log(`[GRUPOS] Verificando ${group.name} | Eu sou admin? ${isBotAdmin ? 'true' : 'false'}`);
                 
                 response += `👥 **${group.name}**\n`;
                 response += `🆔 \`${group.id._serialized}\`\n`;

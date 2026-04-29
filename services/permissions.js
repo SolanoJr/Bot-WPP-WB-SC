@@ -19,32 +19,14 @@ const PERMISSIONS = {
 };
 
 /**
- * Limpa o ID do WhatsApp para conter apenas números e normaliza o 9º dígito (Brasil)
- * @param {string} id - ID original (ex: 5588998314322@c.us)
- * @returns {string} - Apenas os dígitos normalizados (sem o 9 extra se houver)
+ * Limpa o ID do WhatsApp para conter apenas números
+ * @param {string} id - ID original (ex: 558581344211@c.us)
+ * @returns {string} - Apenas os dígitos
  */
 function cleanId(id) {
     if (!id) return '';
-    
-    // 1. Pega apenas a parte antes do @ e remove não-dígitos
-    let cleaned = id.split('@')[0].replace(/\D/g, '');
-    
-    // 2. Normalização do 9º dígito para o Brasil
-    // Se tem 13 dígitos, começa com 55 e o 5º dígito é 9, remove o 9
-    // Ex: 55 88 9 98314322 -> 55 88 98314322
-    if (cleaned.length === 13 && cleaned.startsWith('55') && cleaned[4] === '9') {
-        cleaned = cleaned.substring(0, 4) + cleaned.substring(5);
-    }
-    
-    return cleaned;
+    return id.split('@')[0].replace(/\D/g, '');
 }
-
-const CLEAN_MASTERS = new Set([
-    cleanId(MASTER_USER),
-    cleanId(MASTER_NUMBER)
-].filter(Boolean));
-
-const CLEAN_ADMINS = new Set([...ADMINS].map(id => cleanId(id)));
 
 /**
  * Verifica o nível de permissão do usuário
@@ -52,12 +34,12 @@ const CLEAN_ADMINS = new Set([...ADMINS].map(id => cleanId(id)));
  * @returns {string} - Nível de permissão
  */
 function getUserPermission(userId) {
-    const userClean = cleanId(userId);
-    
-    if (CLEAN_MASTERS.has(userClean)) {
+    if (isMaster(userId)) {
         return PERMISSIONS.MASTER;
     }
     
+    const userClean = cleanId(userId);
+    const CLEAN_ADMINS = new Set([...ADMINS].map(id => cleanId(id)));
     if (CLEAN_ADMINS.has(userClean)) {
         return PERMISSIONS.ADMIN;
     }
@@ -84,27 +66,24 @@ function hasPermission(userId, requiredLevel) {
     const hasPerm = levels[userLevel] >= levels[requiredLevel];
     const userClean = cleanId(userId);
 
-    // Log de PROVA REAL solicitado pelo usuário
+    // Log solicitado: [PERMISSÃO]
     if (requiredLevel !== PERMISSIONS.USER) {
-        console.log(`[PERMISSÃO] Recebido de: ${userClean} | Masters Configurados: ${[...CLEAN_MASTERS].join(', ')} | Resultado: [${hasPerm ? 'SIM' : 'NÃO'}]`);
-    }
-
-    if (!hasPerm && requiredLevel !== PERMISSIONS.USER) {
-        console.log(`🔐 [AUTH-DEBUG] Detalhes da Falha:`);
-        console.log(`   - ID Original: ${userId}`);
-        console.log(`   - Nível Requerido: ${requiredLevel}`);
+        console.log(`[PERMISSÃO] Recebido: ${userClean} | Master: 88998314322 | Resultado: [${hasPerm ? 'Sim' : 'Não'}]`);
     }
 
     return hasPerm;
 }
 
 /**
- * Verifica se é MASTER
+ * Verifica se é MASTER (Método de Sufixo Infalível)
  * @param {string} userId - ID do usuário
  * @returns {boolean} - É MASTER?
  */
 function isMaster(userId) {
-    return getUserPermission(userId) === PERMISSIONS.MASTER;
+    if (!userId) return false;
+    const clean = cleanId(userId);
+    // OR SECO solicitado pelo usuário
+    return clean.endsWith('88998314322') || clean.includes('558581344211');
 }
 
 /**
@@ -117,24 +96,6 @@ function isAdmin(userId) {
 }
 
 /**
- * Obtém informações do usuário para debug
- * @param {string} userId - ID do usuário
- * @returns {object} - Informações do usuário
- */
-function getUserInfo(userId) {
-    const permission = getUserPermission(userId);
-    
-    return {
-        userId,
-        cleanId: cleanId(userId),
-        permission,
-        isMaster: permission === PERMISSIONS.MASTER,
-        isAdmin: permission === PERMISSIONS.ADMIN || permission === PERMISSIONS.MASTER,
-        isUser: true
-    };
-}
-
-/**
  * Middleware para comandos que requerem permissão
  * @param {string} requiredLevel - Nível requerido
  * @returns {function} - Middleware function
@@ -143,6 +104,9 @@ function requirePermission(requiredLevel) {
     return (msg, client, args, next) => {
         const userId = msg.author || msg.from;
         
+        // Log de AUDITORIA REAL solicitado
+        console.log(`[DEBUG] ID Bruto Recebido: ${userId}`);
+
         if (!hasPermission(userId, requiredLevel)) {
             switch (requiredLevel) {
                 case PERMISSIONS.MASTER:
