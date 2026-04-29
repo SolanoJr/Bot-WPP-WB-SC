@@ -8,6 +8,7 @@ require('dotenv').config();
 
 // Configuração de usuários
 const MASTER_USER = process.env.MASTER_USER || '558581344211@c.us';
+const MASTER_NUMBER = process.env.MASTER_NUMBER || ''; // Novo número pessoal/testes
 const ADMINS = new Set((process.env.ADMINS || '').split(',').filter(Boolean));
 
 // Níveis de permissão
@@ -18,16 +19,31 @@ const PERMISSIONS = {
 };
 
 /**
- * Limpa o ID do WhatsApp para conter apenas números
- * @param {string} id - ID original (ex: 558581344211@c.us)
- * @returns {string} - Apenas os dígitos (ex: 558581344211)
+ * Limpa o ID do WhatsApp para conter apenas números e normaliza o 9º dígito (Brasil)
+ * @param {string} id - ID original (ex: 5588998314322@c.us)
+ * @returns {string} - Apenas os dígitos normalizados (sem o 9 extra se houver)
  */
 function cleanId(id) {
     if (!id) return '';
-    return id.split('@')[0].replace(/\D/g, '');
+    
+    // 1. Pega apenas a parte antes do @ e remove não-dígitos
+    let cleaned = id.split('@')[0].replace(/\D/g, '');
+    
+    // 2. Normalização do 9º dígito para o Brasil
+    // Se tem 13 dígitos, começa com 55 e o 5º dígito é 9, remove o 9
+    // Ex: 55 88 9 98314322 -> 55 88 98314322
+    if (cleaned.length === 13 && cleaned.startsWith('55') && cleaned[4] === '9') {
+        cleaned = cleaned.substring(0, 4) + cleaned.substring(5);
+    }
+    
+    return cleaned;
 }
 
-const CLEAN_MASTER = cleanId(MASTER_USER);
+const CLEAN_MASTERS = new Set([
+    cleanId(MASTER_USER),
+    cleanId(MASTER_NUMBER)
+].filter(Boolean));
+
 const CLEAN_ADMINS = new Set([...ADMINS].map(id => cleanId(id)));
 
 /**
@@ -38,7 +54,7 @@ const CLEAN_ADMINS = new Set([...ADMINS].map(id => cleanId(id)));
 function getUserPermission(userId) {
     const userClean = cleanId(userId);
     
-    if (userClean === CLEAN_MASTER) {
+    if (CLEAN_MASTERS.has(userClean)) {
         return PERMISSIONS.MASTER;
     }
     
@@ -66,11 +82,16 @@ function hasPermission(userId, requiredLevel) {
     };
     
     const hasPerm = levels[userLevel] >= levels[requiredLevel];
+    const userClean = cleanId(userId);
+
+    // Log de PROVA REAL solicitado pelo usuário
+    if (requiredLevel !== PERMISSIONS.USER) {
+        console.log(`[PERMISSÃO] Recebido de: ${userClean} | Masters Configurados: ${[...CLEAN_MASTERS].join(', ')} | Resultado: [${hasPerm ? 'SIM' : 'NÃO'}]`);
+    }
 
     if (!hasPerm && requiredLevel !== PERMISSIONS.USER) {
-        console.log(`🔐 [AUTH-DEBUG] Permissão NEGADA:`);
-        console.log(`   - Quem tentou: ${userId} (Clean: ${cleanId(userId)})`);
-        console.log(`   - Master Esperado: ${MASTER_USER} (Clean: ${CLEAN_MASTER})`);
+        console.log(`🔐 [AUTH-DEBUG] Detalhes da Falha:`);
+        console.log(`   - ID Original: ${userId}`);
         console.log(`   - Nível Requerido: ${requiredLevel}`);
     }
 
@@ -83,12 +104,7 @@ function hasPermission(userId, requiredLevel) {
  * @returns {boolean} - É MASTER?
  */
 function isMaster(userId) {
-    const res = getUserPermission(userId) === PERMISSIONS.MASTER;
-    if (!res) {
-        // Log silencioso para debug interno se houver falha no MASTER
-        console.log(`🕵️ [MASTER-CHECK] ${cleanId(userId)} não é o Master ${CLEAN_MASTER}`);
-    }
-    return res;
+    return getUserPermission(userId) === PERMISSIONS.MASTER;
 }
 
 /**
@@ -128,8 +144,6 @@ function requirePermission(requiredLevel) {
         const userId = msg.author || msg.from;
         
         if (!hasPermission(userId, requiredLevel)) {
-            const permission = getUserPermission(userId);
-            
             switch (requiredLevel) {
                 case PERMISSIONS.MASTER:
                     msg.reply('🚫 **Acesso negado!**\n\nEste comando só pode ser usado pelo **MASTER** do bot.');
@@ -157,6 +171,7 @@ module.exports = {
     getUserInfo,
     requirePermission,
     MASTER_USER,
+    MASTER_NUMBER,
     ADMINS,
     cleanId
 };
