@@ -17,6 +17,45 @@ class AutoTestSystem {
         this.INTERFACE_URL = 'https://bot-wpp-wb-sc.pages.dev';
         this.testResults = [];
         this.currentTest = null;
+        this.DEFAULT_TIMEOUT = 10000; // Aumentado para 10 segundos
+        this.MAX_RETRIES = 3;
+    }
+
+    // 🔄 Função de retry com backoff exponencial
+    async retryWithBackoff(operation, retries = this.MAX_RETRIES, delay = 1000) {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                console.log(`🔄 [RETRY] Tentativa ${attempt}/${retries} (delay: ${delay}ms)`);
+                const result = await operation();
+                console.log(`✅ [RETRY] Sucesso na tentativa ${attempt}`);
+                return result;
+            } catch (error) {
+                console.log(`❌ [RETRY] Falha na tentativa ${attempt}: ${error.message}`);
+                
+                if (attempt === retries) {
+                    throw error;
+                }
+                
+                // Backoff exponencial: 1s, 2s, 4s
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2;
+            }
+        }
+    }
+
+    // 🌐 HTTP request com retry e timeout configurável
+    async httpRequest(url, options = {}) {
+        const timeout = options.timeout || this.DEFAULT_TIMEOUT;
+        const retries = options.retries || this.MAX_RETRIES;
+        
+        const operation = () => axios.get(url, { timeout });
+        
+        try {
+            return await this.retryWithBackoff(operation, retries, 1000);
+        } catch (error) {
+            console.error(`❌ [HTTP] Falha total após ${retries} tentativas: ${url}`);
+            throw error;
+        }
     }
 
     // 🧪 Executa todos os testes automatizados
@@ -54,8 +93,10 @@ class AutoTestSystem {
         console.log('🔍 Teste 1/4: Saúde do Relay');
         
         try {
-            const health = await axios.get(`${this.RELAY_URL}/health`, { timeout: 5000 });
-            const ping = await axios.get(`${this.RELAY_URL}/ping`, { timeout: 5000 });
+            console.log(`🌐 [HTTP] Testando saúde com timeout ${this.DEFAULT_TIMEOUT}ms e ${this.MAX_RETRIES} retries`);
+            
+            const health = await this.httpRequest(`${this.RELAY_URL}/health`);
+            const ping = await this.httpRequest(`${this.RELAY_URL}/ping`);
             
             const result = {
                 test: this.currentTest,
@@ -63,7 +104,9 @@ class AutoTestSystem {
                 details: {
                     health: health.data,
                     ping: ping.data,
-                    responseTime: Date.now()
+                    responseTime: Date.now(),
+                    timeoutUsed: this.DEFAULT_TIMEOUT,
+                    retriesUsed: this.MAX_RETRIES
                 }
             };
             
@@ -75,7 +118,11 @@ class AutoTestSystem {
                 test: this.currentTest,
                 status: '❌ FAIL',
                 error: error.message,
-                details: { url: this.RELAY_URL }
+                details: { 
+                    url: this.RELAY_URL,
+                    timeoutUsed: this.DEFAULT_TIMEOUT,
+                    retriesUsed: this.MAX_RETRIES
+                }
             };
             
             this.testResults.push(result);

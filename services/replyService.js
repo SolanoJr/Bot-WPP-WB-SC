@@ -1,3 +1,5 @@
+const { validateNumber } = require('./validationService');
+
 const sendText = async (context, text) => {
     if (!context?.message || typeof context.message.reply !== 'function') {
         throw new Error('Contexto de resposta invalido.');
@@ -10,6 +12,15 @@ const sendText = async (context, text) => {
     console.log(`📤 Enviando mensagem para ${chatId?.substring(0, 20)}...: "${textPreview}"`);
     
     try {
+        // Validar número antes de enviar (se tiver client no contexto)
+        if (context.client) {
+            const validation = await validateNumber(context.client, chatId);
+            if (!validation.valid) {
+                console.log(`🚫 Número inválido detectado: ${chatId} (${validation.error})`);
+                throw new Error(`Número inválido: ${chatId} (${validation.error})`);
+            }
+        }
+        
         const result = await context.message.reply(text);
         const duration = Date.now() - startTime;
         

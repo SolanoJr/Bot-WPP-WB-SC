@@ -1,38 +1,46 @@
+const axios = require('axios');
+
 module.exports = {
     name: 'bemvindo',
-    description: 'Mensagem de boas-vindas e regras do grupo (apenas admin).',
+    description: 'Mensagem de boas-vindas do grupo (configurada via banco).',
 
     async execute(msg, client, args) {
         void args;
 
-        // Verifica se é admin (simplificado para teste)
-        // TODO: Implementar verificação real de admin depois
-        const isAdmin = true; // Temporário para teste
-
-        if (!isAdmin) {
-            await msg.reply('❌ Apenas administradores podem usar este comando.');
+        const chat = await msg.getChat();
+        
+        // Verifica se está num grupo
+        if (!chat.isGroup) {
+            await msg.reply('❌ Este comando só pode ser usado em grupos.');
             return;
         }
 
-        const response = [
-            '👋 **BEM-VINDO AO GRUPO!**',
-            '',
-            '📋 **Regras do Grupo:**',
-            '• Respeite todos os membros',
-            '• Sem spam ou links maliciosos',
-            '• Use os comandos com responsabilidade',
-            '• Dúvidas? Use !help',
-            '',
-            '🤖 **Comandos Disponíveis:**',
-            '• !help - Lista todos os comandos',
-            '• !ondeestou - Verifica sua localização',
-            '• !status - Status do bot',
-            '• !ping - Testar conexão',
-            '',
-            '🔧 **Suporte:**',
-            'Contate o administrador se precisar de ajuda.'
-        ].join('\n');
+        const groupId = chat.id._serialized;
+        const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
 
-        await msg.reply(response);
+        try {
+            const response = await axios.get(`${RELAY_URL}/groups/${encodeURIComponent(groupId)}/config`, {
+                headers: { 'x-api-key': process.env.API_KEY || '' }
+            });
+            const data = response.data;
+
+            if (data.success && data.welcomeMessage) {
+                await msg.reply(data.welcomeMessage);
+            } else {
+                // Mensagem padrão caso não tenha no banco
+                const defaultResponse = [
+                    '👋 **BEM-VINDO AO GRUPO!**',
+                    '',
+                    '🤖 **Comandos Disponíveis:**',
+                    '• !help - Lista todos os comandos',
+                    '• !ondeestou - Verifica sua localização',
+                    '• !ping - Testar conexão'
+                ].join('\n');
+                await msg.reply(defaultResponse);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao buscar bemvindo:', error.message);
+            await msg.reply('⚠️ Não consegui buscar as regras do grupo no momento.');
+        }
     }
 };

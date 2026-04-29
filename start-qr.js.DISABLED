@@ -1,0 +1,12 @@
+/**
+ * 🚫 SCRIPT DESATIVADO - USA SINGLETON AGORA
+ * 
+ * Este script criava múltiplas instâncias do Client.
+ * Use: node whatsapp.js (único ponto de entrada)
+ * 
+ * MOTIVO: Evitar conflitos de "browser already running"
+ */
+
+console.log('🚫 start-qr.js foi desativado para evitar múltiplas instâncias');
+console.log('✅ Use: node whatsapp.js');
+console.log('🚯 O singleton gerencia apenas UMA instância global');
