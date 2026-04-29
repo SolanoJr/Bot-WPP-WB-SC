@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-04-28T15:16:58.488Z",
+  "timestamp": "2026-04-28T20:29:19.333Z",
   "summary": {
     "total": 4,
-    "passed": 4,
-    "failed": 0,
-    "successRate": 100
+    "passed": 3,
+    "failed": 1,
+    "successRate": 75
   },
   "results": [
     {
@@ -14,16 +14,16 @@
         "health": {
           "ok": true,
           "service": "bot-wpp-relay",
-          "timestamp": "2026-04-28T15:17:03.632Z",
+          "timestamp": "2026-04-28T20:29:18.326Z",
           "backend": "http://100.101.218.16:4010"
         },
         "ping": {
           "pong": true,
           "service": "bot-wpp-relay",
-          "timestamp": "2026-04-28T15:17:03.929Z",
-          "uptime": 1599.245721519
+          "timestamp": "2026-04-28T20:29:18.618Z",
+          "uptime": 93.6670518
         },
-        "responseTime": 1777389417574
+        "responseTime": 1777408158734
       }
     },
     {
@@ -35,61 +35,68 @@
           "message": "Localização recebida e armazenada"
         },
         "getResponse": {
-          "token": "test-1777389417575",
-          "chatId": "autotest-1777389417575",
+          "token": "test-1777408158734",
+          "chatId": "autotest-1777408158734",
           "location": {
             "latitude": -23.5505,
             "longitude": -46.6333,
             "accuracy": 10
           },
           "userAgent": "AutoTest-System",
-          "timestamp": "2026-04-28T15:16:57.575Z",
-          "receivedAt": "2026-04-28T15:17:04.182Z"
+          "timestamp": "2026-04-28T20:29:18.734Z",
+          "receivedAt": "2026-04-28T20:29:18.928Z"
         },
         "testData": {
-          "token": "test-1777389417575",
-          "chatId": "autotest-1777389417575",
+          "token": "test-1777408158734",
+          "chatId": "autotest-1777408158734",
           "location": {
             "latitude": -23.5505,
             "longitude": -46.6333,
             "accuracy": 10
           },
           "userAgent": "AutoTest-System",
-          "timestamp": "2026-04-28T15:16:57.575Z"
+          "timestamp": "2026-04-28T20:29:18.734Z"
         }
       }
     },
     {
       "test": "Location Formatting",
-      "status": "✅ PASS",
+      "status": "❌ FAIL",
       "details": {
         "checks": [
           {
             "name": "Título formatado",
-            "passed": true
+            "passed": false
           },
           {
             "name": "Nome do contato",
-            "passed": true
+            "passed": false
           },
           {
             "name": "Latitude formatada",
-            "passed": true
+            "passed": false
           },
           {
             "name": "Longitude formatada",
-            "passed": true
+            "passed": false
           },
           {
             "name": "Link Google Maps",
-            "passed": true
+            "passed": false
           },
           {
             "name": "Polling implementado",
-            "passed": true
+            "passed": false
           }
         ],
-        "failedChecks": []
+        "failedChecks": [
+          "Título formatado",
+          "Nome do contato",
+          "Latitude formatada",
+          "Longitude formatada",
+          "Link Google Maps",
+          "Polling implementado"
+        ]
       }
     },
     {
@@ -102,7 +109,7 @@
         },
         "logsStatus": {
           "hasRecentActivity": true,
-          "lastActivity": "2026-04-28T15:16:58.486Z"
+          "lastActivity": "2026-04-28T20:29:19.333Z"
         }
       }
     }
