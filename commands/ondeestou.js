@@ -5,15 +5,23 @@ module.exports = {
     async execute(msg, client, args) {
         void args;
         
+        const INTERFACE_URL = 'https://bot-wpp-wb-sc.pages.dev';
         const token = `loc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const chatId = msg.from;
+        
+        // 🔄 REGISTRAR CHATID PENDENTE PARA POLLING
+        // Isso permite que o sistema saiba quais chatIds verificar
+        if (global.pendingChatIds) {
+            global.pendingChatIds.add(chatId);
+            console.log(`📝 [ONDEESTOU] ChatId ${chatId} adicionado ao polling`);
+        }
         
         const response = [
             '📍 **Solicitação de Localização**',
             '',
             'Para enviar sua localização em tempo real, clique no link abaixo:',
             '',
-            `🔗 https://bot-wpp-relay.onrender.com/location?token=${token}&chatId=${chatId}`,
+            `🔗 ${INTERFACE_URL}?token=${token}&chatId=${chatId}&relay=https://bot-wpp-relay.onrender.com`,
             '',
             'O link expira assim que a localização for recebida.'
         ].join('\n');

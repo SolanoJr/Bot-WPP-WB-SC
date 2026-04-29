@@ -13,37 +13,23 @@ class WhatsAppSingleton {
     constructor() {
         this.client = null;
         this.isInitialized = false;
-        this.initializing = false;  // 🔒 TRAVA DE CONCORRÊNCIA
         this.lockFile = path.join(__dirname, '..', '.whatsapp-instance.lock');
         this.instanceId = `instance_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    // � Limpar processos Puppeteer/Chrome órfãos
+    // � Limpar processos Chrome zumbis
     async cleanupOrphanedProcesses() {
         const { execSync } = require('child_process');
         
         try {
-            console.log(`🧹 [SINGLETON] Limpando processos Puppeteer/Chrome órfãos...`);
+            console.log(`🧹 [SINGLETON] Limpando processos Chrome zumbis...`);
             
-            // Matar processos Chrome/Puppeteer relacionados à sessão
-            const commands = [
-                `pkill -f "session-bot-wpp-session" 2>/dev/null || true`,
-                `pkill -f "puppeteer" 2>/dev/null || true`,
-                `pkill -f "chrome.*--user-data-dir.*bot-wpp" 2>/dev/null || true`,
-                `fuser -k "${process.cwd()}/.wwebjs_auth/session-bot-wpp-session" 2>/dev/null || true`
-            ];
+            // Apenas limpar Chrome de forma agressiva
+            execSync('pkill -9 -f chrome 2>/dev/null || true', { timeout: 5000 });
+            execSync('pkill -9 -f puppeteer 2>/dev/null || true', { timeout: 5000 });
             
-            for (const cmd of commands) {
-                try {
-                    execSync(cmd, { timeout: 5000 });
-                    console.log(`✅ [SINGLETON] Executado: ${cmd}`);
-                } catch (error) {
-                    // Erro esperado se não houver processos
-                }
-            }
-            
-            // Esperar um pouco para garantir limpeza
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Pequena pausa para garantir limpeza
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
             console.log(`✅ [SINGLETON] Limpeza concluída`);
             
@@ -128,71 +114,49 @@ class WhatsAppSingleton {
             return this.client;
         }
 
-        // 🔒 IMPEDIR MÚLTIPLAS INICIALIZAÇÕES SIMULTÂNEAS
-        if (this.initializing) {
-            console.log(`⏳ [SINGLETON] Aguardando inicialização: ${this.instanceId}`);
-            // Aguardar até inicialização completar
-            while (this.initializing) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            // Retornar client já inicializado
-            if (this.client && this.isInitialized) {
-                return this.client;
-            }
-        }
-
         // Verificar se já existe instância rodando
         if (this.checkExistingInstance()) {
             throw new Error(`WhatsApp Client já está rodando em outro processo. Verifique o lock file: ${this.lockFile}`);
         }
 
-        // � MARCAR COMO INICIALIZANDO
-        this.initializing = true;
-
-        // �🔧 LIMPAR PROCESSOS ÓRFÃOS ANTES DE CRIAR NOVA INSTÂNCIA
+        // Limpar processos Chrome zumbis
         await this.cleanupOrphanedProcesses();
 
         // Criar lock
         if (!this.createLock()) {
-            this.initializing = false;  // 🔓 Liberar em caso de erro
             throw new Error('Não foi possível criar lock de instância');
         }
 
         console.log(`🆕 [SINGLETON] Criando NOVA instância: ${this.instanceId}`);
         
-        try {
-            // Criar client COM CONFIGURAÇÃO ÚNICA
-            this.client = new Client({
-                authStrategy: new LocalAuth({
-                    clientId: 'bot-wpp-session' // ÚNICO clientId em todo sistema
-                }),
-                puppeteer: {
-                    headless: true,
-                    args: [
-                        '--no-sandbox',
-                        '--disable-setuid-sandbox',
-                        '--disable-dev-shm-usage',
-                        '--single-process',
-                        '--no-zygote',
-                        '--disable-gpu',
-                        '--disable-web-security',
-                        '--disable-features=VizDisplayCompositor'
-                    ],
-                },
-                restartOnAuthFail: true
-            });
+        // Criar client COM CONFIGURAÇÃO ÚNICA
+        this.client = new Client({
+            authStrategy: new LocalAuth({
+                clientId: 'bot-wpp-session' // ÚNICO clientId em todo sistema
+            }),
+            puppeteer: {
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--single-process',
+                    '--no-zygote',
+                    '--disable-gpu',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor'
+                ],
+            },
+            restartOnAuthFail: true
+        });
 
-            // Configurar eventos de logging
-            this.setupLogging();
-            
-            this.isInitialized = true;
-            
-            console.log(`✅ [SINGLETON] Client criado com sucesso: ${this.instanceId}`);
-            return this.client;
-        } catch (error) {
-            this.initializing = false;  // 🔓 Liberar em caso de erro
-            throw error;
-        }
+        // Configurar eventos de logging
+        this.setupLogging();
+        
+        this.isInitialized = true;
+        
+        console.log(`✅ [SINGLETON] Client criado com sucesso: ${this.instanceId}`);
+        return this.client;
     }
 
     // 📝 Configurar logging detalhado
