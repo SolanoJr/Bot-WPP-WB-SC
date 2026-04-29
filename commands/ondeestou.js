@@ -13,7 +13,7 @@ module.exports = {
             '',
             'Para enviar sua localização em tempo real, clique no link abaixo:',
             '',
-            `🔗 https://bot-wpp-wb-sc.pages.dev?token=${token}&chatId=${chatId}&relay=https://bot-wpp-relay.onrender.com`,
+            `🔗 https://bot-wpp-relay.onrender.com/location?token=${token}&chatId=${chatId}`,
             '',
             'O link expira assim que a localização for recebida.'
         ].join('\n');
