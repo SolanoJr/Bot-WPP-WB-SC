@@ -14,17 +14,24 @@ module.exports = {
         }
 
         // Verificar permissão (Master ou Admin do grupo)
+        const { cleanId } = require('../services/permissions');
         const authorId = msg.author || msg.from;
         const isUserMaster = isMaster(authorId);
         
         let isGroupAdmin = false;
         if (!isUserMaster) {
-            const members = chat.participants;
-            const member = members.find(m => m.id._serialized === authorId);
+            // Forçar atualização do chat para garantir lista de membros fresca
+            const freshChat = await client.getChatById(chat.id._serialized);
+            const authorClean = cleanId(authorId);
+            
+            const member = freshChat.participants.find(m => cleanId(m.id._serialized) === authorClean);
             isGroupAdmin = member && (member.isAdmin || member.isSuperAdmin);
+            
+            console.log(`🛡️ [ADMIN-CHECK] Usuário ${authorClean} é Admin? ${isGroupAdmin ? 'SIM' : 'NÃO'}`);
         }
 
         if (!isUserMaster && !isGroupAdmin) {
+            console.log(`🚫 [AUTH-FAIL] !antispam negado para ${authorId}`);
             await msg.reply('❌ Apenas administradores do grupo ou o MASTER do bot podem usar este comando.');
             return;
         }

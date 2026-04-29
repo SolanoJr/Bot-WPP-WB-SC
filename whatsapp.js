@@ -112,14 +112,16 @@ const initializeClient = async () => {
                     }).catch(() => null);
 
                     if (configRes && configRes.data && configRes.data.antispamActive === 1) {
+                        const { cleanId } = require('./services/permissions');
                         const authorId = msg.author || msg.from;
+                        const authorClean = cleanId(authorId);
                         
                         // Verificar se autor NÃO é admin e bot É admin
-                        const contact = await msg.getContact();
-                        const member = chat.participants.find(p => p.id._serialized === authorId);
+                        const member = chat.participants.find(p => cleanId(p.id._serialized) === authorClean);
                         const isAuthorAdmin = member && (member.isAdmin || member.isSuperAdmin);
                         
-                        const botMember = chat.participants.find(p => p.id.user === client.info.wid.user);
+                        const botIdClean = cleanId(client.info.wid._serialized);
+                        const botMember = chat.participants.find(p => cleanId(p.id._serialized) === botIdClean);
                         const isBotAdmin = botMember && (botMember.isAdmin || botMember.isSuperAdmin);
 
                         if (!isAuthorAdmin && isBotAdmin) {

@@ -24,8 +24,11 @@ module.exports = {
             let response = `📋 **LISTA DE GRUPOS (${groups.length})**\n\n`;
 
             for (const group of groups) {
-                // Verificar se o bot é admin
-                const botMember = group.participants.find(p => p.id.user === client.info.wid.user);
+                // Verificar se o bot é admin (com cleanId)
+                const { cleanId } = require('../services/permissions');
+                const botIdClean = cleanId(client.info.wid._serialized);
+                
+                const botMember = group.participants.find(p => cleanId(p.id._serialized) === botIdClean);
                 const isBotAdmin = botMember && (botMember.isAdmin || botMember.isSuperAdmin);
                 
                 response += `👥 **${group.name}**\n`;

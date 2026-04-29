@@ -18,19 +18,31 @@ const PERMISSIONS = {
 };
 
 /**
+ * Limpa o ID do WhatsApp para conter apenas números
+ * @param {string} id - ID original (ex: 558581344211@c.us)
+ * @returns {string} - Apenas os dígitos (ex: 558581344211)
+ */
+function cleanId(id) {
+    if (!id) return '';
+    return id.split('@')[0].replace(/\D/g, '');
+}
+
+const CLEAN_MASTER = cleanId(MASTER_USER);
+const CLEAN_ADMINS = new Set([...ADMINS].map(id => cleanId(id)));
+
+/**
  * Verifica o nível de permissão do usuário
  * @param {string} userId - ID do usuário no WhatsApp
  * @returns {string} - Nível de permissão
  */
 function getUserPermission(userId) {
-    // Normalizar ID
-    const normalizedId = userId.includes('@c.us') ? userId : `${userId}@c.us`;
+    const userClean = cleanId(userId);
     
-    if (normalizedId === MASTER_USER) {
+    if (userClean === CLEAN_MASTER) {
         return PERMISSIONS.MASTER;
     }
     
-    if (ADMINS.has(normalizedId)) {
+    if (CLEAN_ADMINS.has(userClean)) {
         return PERMISSIONS.ADMIN;
     }
     
@@ -53,7 +65,16 @@ function hasPermission(userId, requiredLevel) {
         [PERMISSIONS.USER]: 1
     };
     
-    return levels[userLevel] >= levels[requiredLevel];
+    const hasPerm = levels[userLevel] >= levels[requiredLevel];
+
+    if (!hasPerm && requiredLevel !== PERMISSIONS.USER) {
+        console.log(`🔐 [AUTH-DEBUG] Permissão NEGADA:`);
+        console.log(`   - Quem tentou: ${userId} (Clean: ${cleanId(userId)})`);
+        console.log(`   - Master Esperado: ${MASTER_USER} (Clean: ${CLEAN_MASTER})`);
+        console.log(`   - Nível Requerido: ${requiredLevel}`);
+    }
+
+    return hasPerm;
 }
 
 /**
@@ -62,7 +83,12 @@ function hasPermission(userId, requiredLevel) {
  * @returns {boolean} - É MASTER?
  */
 function isMaster(userId) {
-    return getUserPermission(userId) === PERMISSIONS.MASTER;
+    const res = getUserPermission(userId) === PERMISSIONS.MASTER;
+    if (!res) {
+        // Log silencioso para debug interno se houver falha no MASTER
+        console.log(`🕵️ [MASTER-CHECK] ${cleanId(userId)} não é o Master ${CLEAN_MASTER}`);
+    }
+    return res;
 }
 
 /**
@@ -84,6 +110,7 @@ function getUserInfo(userId) {
     
     return {
         userId,
+        cleanId: cleanId(userId),
         permission,
         isMaster: permission === PERMISSIONS.MASTER,
         isAdmin: permission === PERMISSIONS.ADMIN || permission === PERMISSIONS.MASTER,
@@ -98,7 +125,7 @@ function getUserInfo(userId) {
  */
 function requirePermission(requiredLevel) {
     return (msg, client, args, next) => {
-        const userId = msg.from || msg.author;
+        const userId = msg.author || msg.from;
         
         if (!hasPermission(userId, requiredLevel)) {
             const permission = getUserPermission(userId);
@@ -114,11 +141,9 @@ function requirePermission(requiredLevel) {
                     msg.reply('🚫 **Acesso negado!**');
             }
             
-            console.log(`🔒 [PERMISSIONS] Acesso negado: ${userId} (${permission}) tentou usar comando nível ${requiredLevel}`);
             return false;
         }
         
-        console.log(`🔓 [PERMISSIONS] Acesso permitido: ${userId} (${permission})`);
         return next ? next() : true;
     };
 }
@@ -132,5 +157,6 @@ module.exports = {
     getUserInfo,
     requirePermission,
     MASTER_USER,
-    ADMINS
+    ADMINS,
+    cleanId
 };
