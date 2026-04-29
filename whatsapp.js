@@ -2,15 +2,73 @@ const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+require('dotenv').config();
 
 // 🚯 USAR SINGLETON GLOBAL - ÚNICO PONTO DE CRIAÇÃO DO CLIENT
 const whatsappSingleton = require('./services/whatsappSingleton');
+const { isMaster } = require('./services/permissions');
 
 // Obter instância única de forma assíncrona
 let client;
 
 const COMMAND_PREFIX = '!';
 const commands = new Map();
+
+// 🔍 PREFLIGHT CHECK - Testa conexões críticas antes de iniciar
+const preFlightCheck = async () => {
+    console.log('🔍 [PREFLIGHT] Iniciando verificações críticas...');
+    
+    try {
+        // 1. Testar conexão com Relay
+        const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
+        console.log(`🌐 [PREFLIGHT] Testando conexão com Relay: ${RELAY_URL}`);
+        
+        const relayResponse = await axios.get(`${RELAY_URL}/health`, {
+            timeout: 10000,
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        if (relayResponse.status !== 200) {
+            throw new Error(`Relay retornou status ${relayResponse.status}`);
+        }
+        
+        console.log('✅ [PREFLIGHT] Relay OK - Status:', relayResponse.data.status);
+        
+        // 2. Verificar variáveis de ambiente críticas
+        const requiredVars = ['MASTER_USER'];
+        const missingVars = requiredVars.filter(varName => !process.env[varName]);
+        
+        if (missingVars.length > 0) {
+            console.warn(`⚠️  [PREFLIGHT] Variáveis ausentes: ${missingVars.join(', ')}`);
+        } else {
+            console.log('✅ [PREFLIGHT] Variáveis de ambiente OK');
+        }
+        
+        // 3. Verificar sistema de arquivos
+        const authPath = path.join(__dirname, '.wwebjs_auth');
+        if (!fs.existsSync(authPath)) {
+            console.log('📁 [PREFLIGHT] Criando pasta de autenticação...');
+            fs.mkdirSync(authPath, { recursive: true });
+        }
+        
+        console.log('✅ [PREFLIGHT] Sistema de arquivos OK');
+        
+        // 4. Verificar permissões do MASTER
+        if (!process.env.MASTER_USER) {
+            console.warn('⚠️  [PREFLIGHT] MASTER_USER não configurado');
+        } else {
+            console.log(`✅ [PREFLIGHT] MASTER configurado: ${process.env.MASTER_USER}`);
+        }
+        
+        console.log('🎉 [PREFLIGHT] Todas as verificações passaram!');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ [PREFLIGHT] Falha crítica:', error.message);
+        console.error('🛑 [PREFLIGHT] O bot NÃO será iniciado devido a falhas críticas.');
+        process.exit(1);
+    }
+};
 
 // Carregamento dinâmico
 const commandsPath = path.join(__dirname, 'commands');
@@ -155,18 +213,42 @@ const startLocationPolling = () => {
                 return; // Não enviar mensagem com link quebrado
             }
 
-            // Formatar mensagem
+            // Obter informações do contato e chat
+            let contactInfo = '';
+            let chatInfo = '';
+            
+            try {
+                if (location.contactName) {
+                    contactInfo = `👤 **Usuário:** ${location.contactName}\n`;
+                }
+                if (location.isGroup && location.groupName) {
+                    chatInfo = `🏢 **Grupo:** ${location.groupName}\n`;
+                } else if (!location.isGroup) {
+                    chatInfo = `💬 **Chat:** Privado\n`;
+                }
+            } catch (error) {
+                // Ignorar erros de extração de informações
+            }
+
+            // Formatar mensagem melhorada
             const response = [
-                '✅ **Localização recebida!**',
+                '📍 **LOCALIZAÇÃO RECEBIDA!**',
                 '',
-                `📅 Data/Hora: ${new Date(timestamp).toLocaleString('pt-BR')}`,
+                contactInfo,
+                chatInfo,
+                `� **Data/Hora:** ${new Date(timestamp).toLocaleString('pt-BR')}`,
                 '',
-                `🌍 **Google Maps:**`,
+                '🗺️ **LOCALIZAÇÃO:**',
+                `📍 Localização em tempo real`, // Preparado para Reverse Geocoding
+                '',
+                `� **Google Maps:**`,
                 `🔗 https://www.google.com/maps?q=${lat},${lon}`,
                 '',
-                `📍 **Coordenadas:**`,
-                `Latitude: ${lat}`,
-                `Longitude: ${lon}`
+                `� **Coordenadas:**`,
+                `▸ Latitude: ${lat}`,
+                `▸ Longitude: ${lon}`,
+                '',
+                `🆔 **Chat ID:** ${chatId}`
             ].join('\n');
 
             // Enviar mensagem
@@ -195,10 +277,25 @@ const startLocationPolling = () => {
     setInterval(checkPendingLocations, POLLING_INTERVAL);
 };
 
-// Inicializar client assincronamente
-initializeClient();
+// Inicializar sistema com verificações críticas
+const startBot = async () => {
+    try {
+        // 1. Executar verificações críticas
+        await preFlightCheck();
+        
+        // 2. Inicializar client do WhatsApp
+        await initializeClient();
+        
+        // 3. Iniciar polling quando client estiver pronto
+        setTimeout(() => {
+            startLocationPolling();
+        }, 15000); // Aguardar 15s para garantir que client está pronto
+        
+    } catch (error) {
+        console.error('🛑 [BOT] Falha na inicialização:', error.message);
+        process.exit(1);
+    }
+};
 
-// Iniciar polling quando client estiver pronto
-setTimeout(() => {
-    startLocationPolling();
-}, 15000); // Aguardar 15s para garantir que client está pronto
+// Iniciar bot
+startBot();
