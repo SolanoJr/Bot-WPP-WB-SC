@@ -294,11 +294,18 @@
             
             try {
                 console.log('📤 [DEBUG] Enviando para Relay com Key:', apiKey.substring(0, 5) + '...');
-                const response = await fetch(`${relayUrl}/location`, {
+                
+                // Cache-buster para evitar que o Cloudflare ou Browser sirvam versões antigas
+                const cacheBuster = `?t=${Date.now()}`;
+                
+                const response = await fetch(`${relayUrl}/location${cacheBuster}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-api-key': apiKey
+                        'x-api-key': apiKey,
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
                     },
                     body: JSON.stringify({
                         token,

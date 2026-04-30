@@ -13,6 +13,12 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://100.101.218.16:4010';
 const TAILSCALE_HOST = process.env.TAILSCALE_HOST || '100.101.218.16';
 const API_KEY = process.env.API_KEY || ''; // Chave de segurança
 
+// Log de Inicialização Crucial (Diagnóstico de Elite)
+console.log(`🔐 [STARTUP] Verificação de Segurança:`);
+console.log(`   - API_KEY Prefix: ${API_KEY ? API_KEY.substring(0, 3) + '...' : 'MISSING'}`);
+console.log(`   - API_KEY Length: ${API_KEY ? API_KEY.length : 0}`);
+console.log(`   - Backend Target: ${process.env.BACKEND_URL || 'NOT_SET'}`);
+
 // Middleware de Autenticação
 const checkApiKey = (req, res, next) => {
     // 1. Bypass de OPTIONS (CORS Pre-flight)
@@ -226,6 +232,18 @@ app.get('/ping', (req, res) => {
         service: 'bot-wpp-relay',
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
+    });
+});
+
+// Rota Secreta de Debug (conforme solicitado pelo usuário)
+app.get('/debug-env-check', (req, res) => {
+    const key = process.env.API_KEY || '';
+    res.json({
+        ok: true,
+        len: key.length,
+        prefix: key.substring(0, 3),
+        env_status: key ? 'configured' : 'empty',
+        timestamp: new Date().toISOString()
     });
 });
 
