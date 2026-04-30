@@ -6,7 +6,7 @@ module.exports = {
 
     async execute(msg, client, args) {
         const RELAY_URL = 'https://bot-wpp-relay.onrender.com';
-        const API_KEY = process.env.API_KEY || 'api_bot_wpp_2026_secreta_aqui';
+        const WARRIOR_AUTH_KEY = process.env.WARRIOR_AUTH_KEY || 'solano_wb_gps_26';
 
         await msg.reply('📡 Testando conexão com o Relay... Aguarde.');
 
@@ -22,7 +22,7 @@ module.exports = {
             
             try {
                 await axios.get(authTestUrl, {
-                    headers: { 'x-api-key': API_KEY },
+                    headers: { 'x-api-key': WARRIOR_AUTH_KEY },
                     timeout: 5000
                 });
                 authStatus = '✅ Autenticado';
@@ -42,7 +42,7 @@ module.exports = {
                 `⏱️ **Uptime Relay:** ${healthRes.data.uptime ? Math.round(healthRes.data.uptime) + 's' : 'N/A'}`,
                 `📍 **Backend:** ${healthRes.data.backend || 'N/A'}`,
                 '',
-                'Se a autenticação falhou, verifique se a API_KEY no .env do Bot é igual à do Render.'
+                'Se a autenticação falhou, verifique se a WARRIOR_AUTH_KEY no .env do Bot é igual à do Render.'
             ].join('\n');
 
             await msg.reply(response);

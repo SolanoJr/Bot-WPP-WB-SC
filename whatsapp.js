@@ -172,42 +172,40 @@ const initializeClient = async () => {
                 
                 const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
                 
-                await axios.post(`${RELAY_URL}/telemetry`, {
-                    botNumber,
-                    botName,
-                    version
-                }, { 
-                    timeout: 10000,
-                    headers: { 'x-api-key': process.env.API_KEY || '' }
-                });
-                
-                console.log(`📊 [TELEMETRY] Dados enviados ao Relay com sucesso.`);
-            } catch (error) {
-                console.log(`⚠️ [TELEMETRY] Erro ao enviar dados ao Relay: ${error.message}`);
-            }
-        });
-
-        // 🔗 TELEMETRIA DE ENTRADA EM GRUPO
-        client.on('group_join', async (notification) => {
-            try {
-                // Se o próprio bot entrou
-                if (notification.recipientIds.includes(client.info.wid._serialized)) {
-                    const chat = await client.getChatById(notification.chatId);
-                    const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
-                    
-                    console.log(`🆕 [GROUP] Bot entrou no grupo: ${chat.name}`);
-                    
-                    await axios.post(`${RELAY_URL}/groups/${encodeURIComponent(chat.id._serialized)}/config`, {
-                        name: chat.name,
-                        isActive: 1
-                    }, {
-                        headers: { 'x-api-key': process.env.API_KEY || '' }
+                    await axios.post(`${RELAY_URL}/telemetry`, {
+                        botNumber,
+                        botName,
+                        version
+                    }, { 
+                        timeout: 10000,
+                        headers: { 'x-api-key': process.env.WARRIOR_AUTH_KEY || 'solano_wb_gps_26' }
                     });
+                } catch (error) {
+                    console.log(`⚠️ [TELEMETRY] Erro ao enviar dados ao Relay: ${error.message}`);
                 }
-            } catch (error) {
-                console.error('❌ Erro na telemetria de grupo:', error.message);
-            }
-        });
+            });
+
+            // 🔗 TELEMETRIA DE ENTRADA EM GRUPO
+            client.on('group_join', async (notification) => {
+                try {
+                    // Se o próprio bot entrou
+                    if (notification.recipientIds.includes(client.info.wid._serialized)) {
+                        const chat = await client.getChatById(notification.chatId);
+                        const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
+                        
+                        console.log(`🆕 [GROUP] Bot entrou no grupo: ${chat.name}`);
+                        
+                        await axios.post(`${RELAY_URL}/groups/${encodeURIComponent(chat.id._serialized)}/config`, {
+                            name: chat.name,
+                            isActive: 1
+                        }, {
+                            headers: { 'x-api-key': process.env.WARRIOR_AUTH_KEY || 'solano_wb_gps_26' }
+                        });
+                    }
+                } catch (error) {
+                    console.error('❌ Erro na telemetria de grupo:', error.message);
+                }
+            });
 
         // 🔄 KEEP-ALIVE AVANÇADO (Ping a cada 12 horas)
         setInterval(async () => {
