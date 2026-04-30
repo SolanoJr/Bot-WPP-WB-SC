@@ -248,13 +248,13 @@ const startLocationPolling = () => {
             for (const chatId of pendingChatIds) {
                 try {
                     const checkUrl = `${RELAY_URL}/pending/${encodeURIComponent(chatId)}`;
-                    console.log(`🔍 [POLLING] Verificando chatId: ${chatId}`);
+                    console.log(`🔍 [POLLING] Verificando localização para o ChatId: ${chatId}`);
                     
                     const response = await axios.get(checkUrl, {
-                        timeout: 3000,
+                        timeout: 5000,
                         headers: { 
                             'Accept': 'application/json',
-                            'x-api-key': process.env.API_KEY || '' 
+                            'x-api-key': process.env.WARRIOR_AUTH_KEY || 'solano_wb_gps_26'
                         }
                     });
 
