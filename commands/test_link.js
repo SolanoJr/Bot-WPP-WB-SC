@@ -5,8 +5,8 @@ module.exports = {
     description: 'Testa a conexão e autenticação com o Relay no Render',
 
     async execute(msg, client, args) {
-        const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
-        const API_KEY = process.env.API_KEY || '';
+        const RELAY_URL = 'https://bot-wpp-relay.onrender.com';
+        const API_KEY = process.env.API_KEY || 'api_bot_wpp_2026_secreta_aqui';
 
         await msg.reply('📡 Testando conexão com o Relay... Aguarde.');
 

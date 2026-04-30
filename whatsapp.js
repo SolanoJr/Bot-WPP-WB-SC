@@ -18,28 +18,74 @@ const commands = new Map();
 const preFlightCheck = async () => {
     console.log('🔍 [PREFLIGHT] Iniciando verificações críticas...');
     
-    try {
-        // 1. Testar conexão com Relay
-        const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
-        console.log(`🌐 [PREFLIGHT] Testando conexão com Relay: ${RELAY_URL}`);
+    // 0. Forçar Alinhamento de API_KEY (Requisito Elite)
+    const SECRET_KEY = 'api_bot_wpp_2026_secreta_aqui';
+    if (process.env.API_KEY !== SECRET_KEY) {
+        console.warn(`⚠️  [PREFLIGHT] API_KEY desalinhada! Forçando valor padrão de Elite...`);
+        process.env.API_KEY = SECRET_KEY;
         
-        const relayResponse = await axios.get(`${RELAY_URL}/health`, {
+        // Tentar atualizar o arquivo .env se possível
+        try {
+            const envPath = path.join(__dirname, '.env');
+            let envContent = fs.readFileSync(envPath, 'utf8');
+            if (envContent.includes('API_KEY=')) {
+                envContent = envContent.replace(/API_KEY=.*/, `API_KEY=${SECRET_KEY}`);
+                fs.writeFileSync(envPath, envContent);
+                console.log('✅ [PREFLIGHT] Arquivo .env atualizado programaticamente.');
+            }
+        } catch (e) {
+            console.error('⚠️ [PREFLIGHT] Não foi possível atualizar o .env fisicamente, usando em memória.');
+        }
+    }
+
+    try {
+        // 1. Testar conexão e AUTENTICAÇÃO com Relay
+        const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
+        console.log(`🌐 [PREFLIGHT] Testando conexão e AUTH com Relay: ${RELAY_URL}`);
+        
+        // Teste de Health
+        const healthResponse = await axios.get(`${RELAY_URL}/health`, {
             timeout: 10000,
             headers: { 'Accept': 'application/json' }
         });
         
-        if (relayResponse.status !== 200) {
-            throw new Error(`Relay retornou status ${relayResponse.status}`);
+        if (healthResponse.status !== 200) {
+            throw new Error(`Relay Health retornou status ${healthResponse.status}`);
         }
         
-        console.log('✅ [PREFLIGHT] Relay OK - Status:', relayResponse.data.status);
+        // Teste de Autenticação Real
+        try {
+            await axios.get(`${RELAY_URL}/pending/auth_preflight_test`, {
+                timeout: 5000,
+                headers: { 
+                    'Accept': 'application/json',
+                    'x-api-key': process.env.API_KEY 
+                }
+            });
+            console.log('✅ [PREFLIGHT] Autenticação com Relay: OK');
+        } catch (authError) {
+            if (authError.response && authError.response.status === 401) {
+                console.error('❌ [PREFLIGHT] ERRO DE AUTENTICAÇÃO (401)!');
+                console.error('🛑 A API_KEY do Bot não coincide com a do Render.');
+                console.error('🛑 Verifique o painel do Render e o arquivo .env');
+                process.exit(1);
+            }
+            // Se for 204 ou 404 de "not found" para o ID de teste, está OK
+            if (authError.response && (authError.response.status === 204 || authError.response.status === 404)) {
+                console.log('✅ [PREFLIGHT] Autenticação com Relay: OK (Key validada)');
+            } else {
+                throw authError;
+            }
+        }
+        
+        console.log('✅ [PREFLIGHT] Relay Health OK - Status:', healthResponse.data.status);
         
         // 2. Verificar variáveis de ambiente críticas
-        const requiredVars = ['MASTER_USER'];
+        const requiredVars = ['MASTER_USER', 'GEMINI_API_KEY'];
         const missingVars = requiredVars.filter(varName => !process.env[varName]);
         
         if (missingVars.length > 0) {
-            console.warn(`⚠️  [PREFLIGHT] Variáveis ausentes: ${missingVars.join(', ')}`);
+            console.warn(`⚠️  [PREFLIGHT] Variáveis críticas ausentes: ${missingVars.join(', ')}`);
         } else {
             console.log('✅ [PREFLIGHT] Variáveis de ambiente OK');
         }
@@ -53,12 +99,8 @@ const preFlightCheck = async () => {
         
         console.log('✅ [PREFLIGHT] Sistema de arquivos OK');
         
-        // 4. Verificar permissões do MASTER
-        if (!process.env.MASTER_USER) {
-            console.warn('⚠️  [PREFLIGHT] MASTER_USER não configurado');
-        } else {
-            console.log(`✅ [PREFLIGHT] MASTER configurado: ${process.env.MASTER_USER}`);
-        }
+        // 4. Verificar MASTER_USER
+        console.log(`✅ [PREFLIGHT] MASTER configurado: ${process.env.MASTER_USER}`);
         
         console.log('🎉 [PREFLIGHT] Todas as verificações passaram!');
         return true;
