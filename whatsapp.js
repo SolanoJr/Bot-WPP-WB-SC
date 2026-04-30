@@ -40,8 +40,15 @@ const preFlightCheck = async () => {
 
     try {
         // 1. Testar conexão e AUTENTICAÇÃO com Relay
-        const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
+        const RELAY_URL = 'https://bot-wpp-relay.onrender.com'; // Forçado URL pública
         console.log(`🌐 [PREFLIGHT] Testando conexão e AUTH com Relay: ${RELAY_URL}`);
+        
+        // Debug de API_KEY solicitado
+        const currentKey = process.env.API_KEY || '';
+        const keyParts = currentKey.length >= 8 
+            ? `${currentKey.substring(0, 4)}...${currentKey.substring(currentKey.length - 4)}`
+            : 'CHAVE_CURTA_INVALIDA';
+        console.log(`🔐 [PREFLIGHT] Debug de Chave Local: [${keyParts}]`);
         
         // Teste de Health
         const healthResponse = await axios.get(`${RELAY_URL}/health`, {
@@ -54,7 +61,6 @@ const preFlightCheck = async () => {
         }
         
         // Teste de Autenticação Real
-        console.log(`🔐 [PREFLIGHT] Usando API_KEY: ${process.env.API_KEY ? process.env.API_KEY.substring(0, 5) + '...' : 'Vazia'}`);
         try {
             await axios.get(`${RELAY_URL}/pending/auth_preflight_test`, {
                 timeout: 5000,
@@ -66,16 +72,14 @@ const preFlightCheck = async () => {
             console.log('✅ [PREFLIGHT] Autenticação com Relay: OK');
         } catch (authError) {
             if (authError.response && authError.response.status === 401) {
-                console.error('❌ [PREFLIGHT] ERRO DE AUTENTICAÇÃO (401)!');
-                console.error('🛑 A API_KEY do Bot não coincide com a do Render.');
-                console.error('🛑 Verifique o painel do Render e o arquivo .env');
-                process.exit(1);
-            }
-            // Se for 204 ou 404 de "not found" para o ID de teste, está OK
-            if (authError.response && (authError.response.status === 204 || authError.response.status === 404)) {
+                console.error('⚠️  [PREFLIGHT] ERRO DE AUTENTICAÇÃO (401)!');
+                console.error('🛑 A API_KEY do Bot parece não coincidir com a do Render.');
+                console.error('🛑 Continuando boot em modo degradado (sem geolocalização)...');
+                // process.exit(1); // Desabilitado conforme solicitação do usuário
+            } else if (authError.response && (authError.response.status === 204 || authError.response.status === 404)) {
                 console.log('✅ [PREFLIGHT] Autenticação com Relay: OK (Key validada)');
             } else {
-                throw authError;
+                console.warn(`⚠️  [PREFLIGHT] Falha ao validar Auth: ${authError.message}`);
             }
         }
         
