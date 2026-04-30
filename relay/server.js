@@ -15,8 +15,16 @@ const API_KEY = process.env.API_KEY || ''; // Chave de segurança
 
 // Middleware de Autenticação
 const checkApiKey = (req, res, next) => {
+    // 1. Bypass de OPTIONS (CORS Pre-flight)
+    if (req.method === 'OPTIONS') {
+        return next();
+    }
+
     const providedKey = req.headers['x-api-key'];
     
+    // Log Dedo-duro (conforme solicitado para auditoria técnica)
+    console.log(`🔐 [AUTH] Auditoria: Path ${req.path} | Recebida: ${providedKey ? providedKey.substring(0, 5) + '...' : 'null'} | Esperada: ${API_KEY ? API_KEY.substring(0, 5) + '...' : 'null'}`);
+
     // Ignorar checagem se o servidor não configurou API_KEY (fallback seguro)
     if (!API_KEY) {
         return next();
