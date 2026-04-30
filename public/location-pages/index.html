@@ -204,7 +204,10 @@
         const chatId = urlParams.get('chatId');
         // Suporte duplo: warriorKey ou apiKey (Requisito Elite)
         const apiKey = urlParams.get('warriorKey') || urlParams.get('apiKey') || 'solano_wb_gps_26';
-        const relayUrl = urlParams.get('relay') || 'https://bot-wpp-relay.onrender.com';
+        
+        // Sanitização de URL: Remove portas manuais (ex: :296) para evitar erros de fetch
+        let relayUrl = urlParams.get('relay') || 'https://bot-wpp-relay.onrender.com';
+        relayUrl = relayUrl.replace(/:\d+$/, '');
         
         let currentPosition = null;
 
