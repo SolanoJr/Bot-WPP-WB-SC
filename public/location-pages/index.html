@@ -202,8 +202,8 @@
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         const chatId = urlParams.get('chatId');
-        // HARDCODE DE TESTE: Tenta pegar da URL, se falhar usa a nova chave Warrior
-        const apiKey = urlParams.get('apiKey') || 'solano_wb_gps_26';
+        // Suporte duplo: warriorKey ou apiKey (Requisito Elite)
+        const apiKey = urlParams.get('warriorKey') || urlParams.get('apiKey') || 'solano_wb_gps_26';
         const relayUrl = urlParams.get('relay') || 'https://bot-wpp-relay.onrender.com';
         
         let currentPosition = null;

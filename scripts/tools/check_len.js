@@ -16,7 +16,7 @@ async function testLen() {
         
         console.log('📡 Chamando /pending/test_auth...');
         const response = await axios.get(`${RELAY_URL}/pending/test_auth`, {
-            headers: { 'x-api-key': API_KEY },
+            headers: { 'x-api-key': WARRIOR_AUTH_KEY },
             validateStatus: () => true // Permite capturar 401
         });
 
