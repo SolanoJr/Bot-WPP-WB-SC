@@ -202,7 +202,8 @@
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         const chatId = urlParams.get('chatId');
-        const apiKey = urlParams.get('apiKey') || '';
+        // HARDCODE DE TESTE: Tenta pegar da URL, se falhar usa a chave fixa de Elite
+        const apiKey = urlParams.get('apiKey') || 'api_bot_wpp_2026_secreta_aqui';
         const relayUrl = urlParams.get('relay') || 'https://bot-wpp-relay.onrender.com';
         
         let currentPosition = null;
@@ -210,6 +211,8 @@
         // Validação inicial
         if (!token) {
             showError('Token inválido. Use o link enviado pelo bot.');
+        } else if (!apiKey) {
+            showError('Erro Crítico: Chave de API não configurada.');
         } else {
             // Iniciar obtenção de localização
             setTimeout(getLocation, 1000);
@@ -277,6 +280,11 @@
                 return;
             }
 
+            if (!apiKey) {
+                showError('Erro de Segurança: API_KEY ausente.');
+                return;
+            }
+
             const { latitude, longitude, accuracy } = currentPosition.coords;
             
             // Desabilitar botão
@@ -285,6 +293,7 @@
             btn.textContent = 'Enviando...';
             
             try {
+                console.log('📤 [DEBUG] Enviando para Relay com Key:', apiKey.substring(0, 5) + '...');
                 const response = await fetch(`${relayUrl}/location`, {
                     method: 'POST',
                     headers: {

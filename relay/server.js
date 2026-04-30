@@ -21,28 +21,27 @@ const checkApiKey = (req, res, next) => {
     }
 
     const providedKey = req.headers['x-api-key'];
+    const expectedKey = API_KEY ? String(API_KEY).trim() : '';
+    const receivedKey = providedKey ? String(providedKey).trim() : '';
     
-    // Log Dedo-duro (conforme solicitado para auditoria técnica)
-    console.log(`🔐 [AUTH] Auditoria: Path ${req.path} | Recebida: ${providedKey ? providedKey.substring(0, 5) + '...' : 'null'} | Esperada: ${API_KEY ? API_KEY.substring(0, 5) + '...' : 'null'}`);
+    // Log Dedo-duro v2 (com comprimento para detectar espaços invisíveis)
+    console.log(`🔐 [AUTH] Auditoria: Path ${req.path}`);
+    console.log(`📏 [AUTH] Recebida: [${receivedKey.substring(0, 5)}...] (Len: ${receivedKey.length})`);
+    console.log(`📏 [AUTH] Esperada: [${expectedKey.substring(0, 5)}...] (Len: ${expectedKey.length})`);
 
     // Ignorar checagem se o servidor não configurou API_KEY (fallback seguro)
-    if (!API_KEY) {
+    if (!expectedKey) {
         return next();
     }
     
-    if (providedKey !== API_KEY) {
+    if (receivedKey !== expectedKey) {
         console.warn(`🔒 [SECURITY] Acesso negado em ${req.path} - Chave inválida`);
         
-        // Debug de recebimento para ajudar o usuário a diagnosticar o erro no console do navegador
-        const receivedPart = providedKey && providedKey.length >= 8
-            ? `${providedKey.substring(0, 4)}...${providedKey.substring(providedKey.length - 4)}`
-            : (providedKey ? 'KEY_TOO_SHORT' : 'NULL');
-
         return res.status(401).json({ 
             success: false, 
             error: 'auth_failed',
             message: 'Unauthorized',
-            received_key: receivedPart
+            received_key: receivedKey ? `${receivedKey.substring(0, 4)}...${receivedKey.substring(receivedKey.length - 4)}` : 'null'
         });
     }
     
