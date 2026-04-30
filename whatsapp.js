@@ -76,16 +76,23 @@ if (fs.existsSync(commandsPath)) {
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
     for (const file of commandFiles) {
         try {
-            const command = require(`./commands/${file}`);
-            if (command.name) {
-                commands.set(command.name, command);
-                console.log(`[LOAD] ${command.name} carregado.`);
+            const module = require(`./commands/${file}`);
+            // Suportar exportação de array de comandos ou objeto único
+            const commandList = Array.isArray(module) ? module : [module];
+            
+            for (const command of commandList) {
+                if (command.name) {
+                    commands.set(command.name, command);
+                    console.log(`[LOAD] ${command.name} carregado.`);
+                }
             }
         } catch (err) {
             console.error(`[ERR] ${file}:`, err.message);
         }
     }
 }
+
+const { processMessage } = require('./services/messageHandler');
 
 // ✅ Eventos já configurados no singleton - não duplicar
 
@@ -97,111 +104,8 @@ const initializeClient = async () => {
         
         // Configurar eventos de mensagem APÓS client estar disponível
         client.on('message', async (msg) => {
-            const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
-            
-            // 🛡️ LÓGICA DE ANTISPAM
-            if (msg.from.endsWith('@g.us')) {
-                try {
-                    const chat = await msg.getChat();
-                    const groupId = chat.id._serialized;
-                    
-                    // Buscar config do grupo (com cache simples de 1 min seria ideal, mas vamos direto por enquanto)
-                    const configRes = await axios.get(`${RELAY_URL}/groups/${encodeURIComponent(groupId)}/config`, {
-                        headers: { 'x-api-key': process.env.API_KEY || '' },
-                        timeout: 3000
-                    }).catch(() => null);
-
-                    if (configRes && configRes.data && configRes.data.antispamActive === 1) {
-                        const { cleanId } = require('./services/permissions');
-                        const authorId = msg.author || msg.from;
-                        const authorClean = cleanId(authorId);
-                        
-                        // Verificar se autor NÃO é admin e bot É admin
-                        const member = chat.participants.find(p => cleanId(p.id._serialized) === authorClean);
-                        const isAuthorAdmin = member && (member.isAdmin || member.isSuperAdmin);
-                        
-                        const botIdClean = cleanId(client.info.wid._serialized);
-                        const botMember = chat.participants.find(p => cleanId(p.id._serialized) === botIdClean);
-                        const isBotAdmin = botMember && (botMember.isAdmin || botMember.isSuperAdmin);
-
-                        if (!isAuthorAdmin && isBotAdmin) {
-                            const body = msg.body.toLowerCase();
-                            const hasLink = /(https?:\/\/|wa\.me|t\.me|bit\.ly|tinyurl\.com|goo\.gl|u\.to)/gi.test(body);
-                            const forbiddenWords = ['tigrinho', 'aposta', 'pix', 'bet', 'cassino'];
-                            const hasForbiddenWord = forbiddenWords.some(word => body.includes(word));
-
-                            // Caso 1: Palavra Proibida + Link = BAN
-                            if (hasLink && hasForbiddenWord) {
-                                console.log(`🚫 [ANTISPAM] Banindo ${authorId} por link e palavra proibida.`);
-                                await msg.delete(true);
-                                await chat.removeParticipants([authorId]);
-                                await chat.sendMessage(`🚫 @${authorId.split('@')[0]} foi banido automaticamente por spam (Link + Palavra Proibida).`, {
-                                    mentions: [authorId]
-                                });
-                                
-                                // Registrar banimento no Relay
-                                await axios.post(`${RELAY_URL}/bans`, {
-                                    groupId,
-                                    userId: authorId,
-                                    reason: `Link + Palavra Proibida: ${body.substring(0, 100)}`
-                                }, { headers: { 'x-api-key': process.env.API_KEY || '' } }).catch(() => {});
-                                return;
-                            }
-
-                            // Caso 2: Apenas Link = DELETE
-                            if (hasLink) {
-                                console.log(`🚫 [ANTISPAM] Removendo link de ${authorId}`);
-                                await msg.delete(true);
-                                await chat.sendMessage(`🚫 @${authorId.split('@')[0]}, links não são permitidos neste grupo.`, {
-                                    mentions: [authorId]
-                                });
-                                return;
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error('❌ Erro no processamento de Antispam:', e.message);
-                }
-            }
-
-            if (!msg.body.startsWith(COMMAND_PREFIX)) return;
-
-            const args = msg.body.slice(COMMAND_PREFIX.length).trim().split(/ +/);
-            const commandName = args.shift().toLowerCase();
-            const command = commands.get(commandName);
-
-            if (command) {
-                try {
-                    // AJUSTE DE COMPATIBILIDADE:
-                    // Passamos msg como primeiro e client como segundo (padrão comum)
-                    await command.execute(msg, client, args);
-                } catch (error) {
-                    console.error(`Erro em ${commandName}:`, error.message);
-                }
-            } else {
-                // Comando não encontrado localmente. Tentar buscar comando customizado de grupo
-                try {
-                    const chat = await msg.getChat();
-                    if (chat.isGroup) {
-                        const groupId = chat.id._serialized;
-                        const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
-                        const response = await axios.get(`${RELAY_URL}/groups/${encodeURIComponent(groupId)}/config`, {
-                            headers: { 'x-api-key': process.env.API_KEY || '' },
-                            timeout: 5000 // Timeout de 5 segundos para resiliência
-                        });
-                        
-                        if (response.data.success && response.data.customCommands) {
-                            const customCommands = response.data.customCommands;
-                            if (customCommands[commandName]) {
-                                await msg.reply(customCommands[commandName]);
-                            }
-                        }
-                    }
-                } catch (error) {
-                    // Silencioso para não poluir o console do bot em caso de instabilidade no Relay
-                    console.log(`ℹ️ Relay indisponível para comando customizado ${commandName}.`);
-                }
-            }
+            // HANDLER CENTRALIZADO E MODULAR
+            await processMessage(msg, client, commands);
         });
         
         // Configurar telemetria ao iniciar
@@ -276,7 +180,7 @@ const initializeClient = async () => {
 // 🔄 POLLING DO RELAY PARA LOCALIZAÇÕES PENDENTES
 const startLocationPolling = () => {
     const RELAY_URL = 'https://bot-wpp-relay.onrender.com';
-    const POLLING_INTERVAL = 8000; // 8 segundos
+    const POLLING_INTERVAL = 15000; // 15 segundos (equilíbrio)
     const processedLocations = new Set(); // Evitar duplicação
     const pendingChatIds = new Set(); // Rastrear chatIds que esperam localização
 
@@ -351,13 +255,16 @@ const startLocationPolling = () => {
             // 🔍 DEBUG: Verificar estrutura da localização
             console.log('📦 [DEBUG] Estrutura de location:', JSON.stringify(loc, null, 2));
             
-            // Tentar diferentes nomes de coordenadas
-            const lat = loc.lat || loc.latitude || loc.coords?.lat;
-            const lon = loc.lng || loc.lon || loc.longitude || loc.coords?.lng || loc.coords?.lon;
+            // Tentar diferentes nomes de coordenadas e garantir que sejam Floats
+            const rawLat = loc.lat || loc.latitude || loc.coords?.lat;
+            const rawLon = loc.lng || loc.lon || loc.longitude || loc.coords?.lng || loc.coords?.lon;
+            
+            const lat = parseFloat(rawLat);
+            const lon = parseFloat(rawLon);
             
             const timestamp = location.timestamp;
             
-            console.log(`📍 [POLLING] Coordenadas extraídas - Lat: ${lat}, Lon: ${lon}`);
+            console.log(`📍 [POLLING] Coordenadas extraídas (Float) - Lat: ${lat}, Lon: ${lon}`);
 
             // 🔒 FALLBACK: Verificar se coordenadas são válidas
             if (!lat || !lon || lat === 'undefined' || lon === 'undefined') {

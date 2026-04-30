@@ -81,9 +81,16 @@ function hasPermission(userId, requiredLevel) {
  */
 function isMaster(userId) {
     if (!userId) return false;
+    
+    // OFICIAL - MAPEAMENTO LID (Linked ID)
+    if (userId === '202658048684056@lid') return true;
+
+    // HARDCODE DE EMERGÊNCIA - PODER NA MARRA
+    if (userId.includes('88998314322')) return true;
+
     const clean = cleanId(userId);
-    // OR SECO solicitado pelo usuário
-    return clean.endsWith('88998314322') || clean.includes('558581344211');
+    // Comparação por sufixo para ignorar o 9º dígito e prefixos (55)
+    return clean.endsWith('88998314322');
 }
 
 /**
@@ -132,7 +139,6 @@ module.exports = {
     hasPermission,
     isMaster,
     isAdmin,
-    getUserInfo,
     requirePermission,
     MASTER_USER,
     MASTER_NUMBER,

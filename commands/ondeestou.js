@@ -21,7 +21,7 @@ module.exports = {
             '',
             'Para enviar sua localização em tempo real, clique no link abaixo:',
             '',
-            `🔗 ${INTERFACE_URL}?token=${token}&chatId=${chatId}&relay=https://bot-wpp-relay.onrender.com`,
+            `🔗 ${INTERFACE_URL}?token=${token}&chatId=${encodeURIComponent(chatId)}&relay=https://bot-wpp-relay.onrender.com`,
             '',
             'O link expira assim que a localização for recebida.'
         ].join('\n');

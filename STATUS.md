@@ -4,9 +4,11 @@
 
 **Projeto:** Bot WhatsApp com Sistema de Localização em Tempo Real  
 **Status:** ✅ **PRODUÇÃO - POLING FUNCIONAL + BANCO SQLITE**  
-**Última Atualização:** 29/04/2026 - 14:30  
-**Versão:** v1.1.0-ui-enhanced  
-**Focus:** Refinamento da UI e estabilização do sistema  
+**Projeto:** Bot WhatsApp com Sistema de Localização em Tempo Real  
+**Status:** ✅ **PRODUÇÃO - MODO ELITE + IA GEMINI + PREFIXO $**  
+**Última Atualização:** 30/04/2026 - 10:10  
+**Versão:** v1.2.0-elite  
+**Focus:** Inteligência Artificial, Segurança Master e Prefixo Estratégico  
 
 ---
 
@@ -243,6 +245,31 @@
   - **Keep-Alive:** Ping automático a cada 12 horas para manter Relay ativo
 - ✅ **Testes Automatizados de Comandos:**
   - Criado `tests/pre_validation.js` simulando a entrada do WhatsApp para rodar os comandos sem disparar a API
+ 
+---
+ 
+### **🚀 FASE 8: EVOLUÇÃO ELITE (IA + MASTER SECURITY)**
+ 
+**Período:** Refinamento Estratégico  
+**Status:** ✅ **CONCLUÍDO (30/04/2026)**
+ 
+**O que foi feito:**
+ 
+- ✅ **Integração com IA (Gemini):**
+  - Implementado `services/aiService.js` com modelo `gemini-flash-latest`.
+  - Configurado System Prompt estratégico para respostas inteligentes e maduras.
+  - Comando `$pergunta` funcional com tratamento detalhado de erros.
+- ✅ **Padronização de Prefixo ($):**
+  - Migração de `!` para `$` como prefixo global configurável via `.env`.
+  - Atualização visual de todos os menus e respostas para o novo padrão.
+- ✅ **Resiliência e Identidade (@lid):**
+  - Suporte oficial ao identificador `@lid` do WhatsApp.
+  - Correção na geração de links do `$ondeestou` com `encodeURIComponent(chatId)`.
+  - Atualização do Relay para aceitar qualquer origem via CORS e gerenciar IDs Master.
+- ✅ **Telemetria e Performance:**
+  - Cálculo dinâmico de Uptime no `$menu`.
+  - Leitura real do nível de bateria via `getBatteryStatus()`.
+  - Tratamento robusto de coordenadas (parseFloat) para evitar erros de link.
 
 ---
 
