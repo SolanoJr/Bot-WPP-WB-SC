@@ -17,7 +17,7 @@ const API_KEY = process.env.API_KEY || ''; // Chave de segurança
 app.get('/debug-auth', (req, res) => {
     res.json({
         hasApiKey: !!API_KEY,
-        apiKeyPrefix: API_KEY ? API_KEY.substring(0, 3) + '...' : 'none',
+        apiKeyPrefix: API_KEY ? API_KEY.substring(0, 10) + '...' : 'none',
         receivedHeaders: req.headers,
         envKeys: Object.keys(process.env).filter(k => k.includes('API'))
     });
