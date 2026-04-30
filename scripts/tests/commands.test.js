@@ -48,8 +48,8 @@ describe('Suite de Testes de Integração - WarriorBlack Commands', () => {
                 reply: jest.fn().mockResolvedValue(true)
             };
             
-            // Mock do process.env.API_KEY
-            process.env.API_KEY = 'api_bot_wpp_2026_secreta_aqui';
+            // Mock da nova chave
+            process.env.WARRIOR_AUTH_KEY = 'solano_wb_gps_26';
 
             await ondeestou.execute(mockMsg, {}, []);
 
@@ -58,7 +58,7 @@ describe('Suite de Testes de Integração - WarriorBlack Commands', () => {
             expect(replyCall).toContain('Solicitação de Localização');
             expect(replyCall).toContain('token=loc_');
             expect(replyCall).toContain('chatId=558581344211%40c.us');
-            expect(replyCall).toContain('apiKey=api_bot_wpp_2026_secreta_aqui');
+            expect(replyCall).toContain('apiKey=solano_wb_gps_26');
             expect(replyCall).toContain('relay=https://bot-wpp-relay.onrender.com');
         });
     });

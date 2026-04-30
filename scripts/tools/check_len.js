@@ -3,11 +3,11 @@ require('dotenv').config();
 
 async function testLen() {
     const RELAY_URL = 'https://bot-wpp-relay.onrender.com';
-    const API_KEY = process.env.API_KEY || 'api_bot_wpp_2026_secreta_aqui';
+    const WARRIOR_AUTH_KEY = process.env.WARRIOR_AUTH_KEY || 'solano_wb_gps_26';
 
-    console.log('🔍 [TEST] Iniciando teste de comprimento de chave...');
+    console.log('🔍 [TEST] Iniciando teste de comprimento de chave (Warrior Mode)...');
     console.log(`🔗 Destino: ${RELAY_URL}/health`);
-    console.log(`🔑 Chave Local (Len): ${API_KEY.length}`);
+    console.log(`🔑 Chave Local (Len): ${WARRIOR_AUTH_KEY.length}`);
 
     try {
         // Fazendo um GET /health com a chave para disparar o middleware checkApiKey

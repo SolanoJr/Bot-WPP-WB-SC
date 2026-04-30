@@ -11,12 +11,12 @@ const PORT = process.env.PORT || 3000;
 // Configuração
 const BACKEND_URL = process.env.BACKEND_URL || 'http://100.101.218.16:4010';
 const TAILSCALE_HOST = process.env.TAILSCALE_HOST || '100.101.218.16';
-const API_KEY = process.env.API_KEY || ''; // Chave de segurança
+const WARRIOR_AUTH_KEY = process.env.WARRIOR_AUTH_KEY || 'solano_wb_gps_26'; // Nova Chave de Elite
 
 // Log de Inicialização Crucial (Diagnóstico de Elite)
-console.log(`🔐 [STARTUP] Verificação de Segurança:`);
-console.log(`   - API_KEY Prefix: ${API_KEY ? API_KEY.substring(0, 3) + '...' : 'MISSING'}`);
-console.log(`   - API_KEY Length: ${API_KEY ? API_KEY.length : 0}`);
+console.log(`🔐 [STARTUP] Verificação de Segurança (Warrior Mode):`);
+console.log(`   - Auth Key Prefix: ${WARRIOR_AUTH_KEY ? WARRIOR_AUTH_KEY.substring(0, 4) + '...' : 'MISSING'}`);
+console.log(`   - Auth Key Length: ${WARRIOR_AUTH_KEY ? WARRIOR_AUTH_KEY.length : 0}`);
 console.log(`   - Backend Target: ${process.env.BACKEND_URL || 'NOT_SET'}`);
 
 // Middleware de Autenticação
@@ -27,7 +27,7 @@ const checkApiKey = (req, res, next) => {
     }
 
     const providedKey = req.headers['x-api-key'];
-    const expectedKey = API_KEY ? String(API_KEY).trim() : '';
+    const expectedKey = WARRIOR_AUTH_KEY ? String(WARRIOR_AUTH_KEY).trim() : '';
     const receivedKey = providedKey ? String(providedKey).trim() : '';
     
     // Log Dedo-duro v2 (com comprimento para detectar espaços invisíveis)
@@ -35,7 +35,7 @@ const checkApiKey = (req, res, next) => {
     console.log(`📏 [AUTH] Recebida: [${receivedKey.substring(0, 5)}...] (Len: ${receivedKey.length})`);
     console.log(`📏 [AUTH] Esperada: [${expectedKey.substring(0, 5)}...] (Len: ${expectedKey.length})`);
 
-    // Ignorar checagem se o servidor não configurou API_KEY (fallback seguro)
+    // Ignorar checagem se o servidor não configurou a chave (fallback seguro)
     if (!expectedKey) {
         return next();
     }
@@ -237,11 +237,12 @@ app.get('/ping', (req, res) => {
 
 // Rota Secreta de Debug (conforme solicitado pelo usuário)
 app.get('/debug-env-check', (req, res) => {
-    const key = process.env.API_KEY || '';
+    const key = WARRIOR_AUTH_KEY || '';
     res.json({
         ok: true,
         len: key.length,
-        prefix: key.substring(0, 3),
+        prefix: key.substring(0, 4),
+        variable_name: 'WARRIOR_AUTH_KEY',
         env_status: key ? 'configured' : 'empty',
         timestamp: new Date().toISOString()
     });

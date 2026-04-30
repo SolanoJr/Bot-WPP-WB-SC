@@ -4,12 +4,12 @@ const express = require('express');
 // Importamos a lógica de auth diretamente do server.js (se estivesse exportada)
 // Como o server.js é um app completo, vamos simular o middleware para garantir que a LÓGICA está blindada.
 
-const API_KEY_TEST = 'api_bot_wpp_2026_secreta_aqui';
+const WARRIOR_AUTH_KEY_TEST = 'solano_wb_gps_26';
 
 const checkApiKey = (req, res, next) => {
     if (req.method === 'OPTIONS') return next();
     const providedKey = req.headers['x-api-key'];
-    const expectedKey = String(API_KEY_TEST).trim();
+    const expectedKey = String(WARRIOR_AUTH_KEY_TEST).trim();
     const receivedKey = providedKey ? String(providedKey).trim() : '';
 
     if (receivedKey !== expectedKey) {
@@ -27,7 +27,7 @@ describe('🔒 Blindagem de Autenticação (Negativo/Positivo)', () => {
     it('✅ POSITIVO: Deve permitir acesso com a chave correta', async () => {
         const response = await request(app)
             .post('/test-auth')
-            .set('x-api-key', 'api_bot_wpp_2026_secreta_aqui')
+            .set('x-api-key', 'solano_wb_gps_26')
             .send({});
         
         expect(response.status).toBe(200);
@@ -37,7 +37,7 @@ describe('🔒 Blindagem de Autenticação (Negativo/Positivo)', () => {
     it('❌ NEGATIVO: Deve bloquear chave com caractere faltando', async () => {
         const response = await request(app)
             .post('/test-auth')
-            .set('x-api-key', 'api_bot_wpp_2026_secreta_aqu') // Falta o 'i'
+            .set('x-api-key', 'solano_wb_gps_2') // Falta o '6'
             .send({});
         
         expect(response.status).toBe(401);
@@ -47,7 +47,7 @@ describe('🔒 Blindagem de Autenticação (Negativo/Positivo)', () => {
     it('❌ NEGATIVO: Deve bloquear chave com caractere extra', async () => {
         const response = await request(app)
             .post('/test-auth')
-            .set('x-api-key', 'api_bot_wpp_2026_secreta_aqui_X')
+            .set('x-api-key', 'solano_wb_gps_26_X')
             .send({});
         
         expect(response.status).toBe(401);
@@ -64,7 +64,7 @@ describe('🔒 Blindagem de Autenticação (Negativo/Positivo)', () => {
     it('✅ TOLERÂNCIA: Deve permitir se houver espaços nas extremidades (Trim Test)', async () => {
         const response = await request(app)
             .post('/test-auth')
-            .set('x-api-key', '  api_bot_wpp_2026_secreta_aqui  ')
+            .set('x-api-key', '  solano_wb_gps_26  ')
             .send({});
         
         expect(response.status).toBe(200);

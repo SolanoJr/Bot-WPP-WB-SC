@@ -18,21 +18,26 @@ const commands = new Map();
 const preFlightCheck = async () => {
     console.log('🔍 [PREFLIGHT] Iniciando verificações críticas...');
     
-    // 0. Forçar Alinhamento de API_KEY (Requisito Elite)
-    const SECRET_KEY = 'api_bot_wpp_2026_secreta_aqui';
-    if (process.env.API_KEY !== SECRET_KEY) {
-        console.warn(`⚠️  [PREFLIGHT] API_KEY desalinhada! Forçando valor padrão de Elite...`);
-        process.env.API_KEY = SECRET_KEY;
+    // 0. Forçar Alinhamento de WARRIOR_AUTH_KEY (Requisito Elite)
+    const SECRET_KEY = 'solano_wb_gps_26';
+    if (process.env.WARRIOR_AUTH_KEY !== SECRET_KEY) {
+        console.warn(`⚠️  [PREFLIGHT] WARRIOR_AUTH_KEY desalinhada! Forçando valor padrão de Elite...`);
+        process.env.WARRIOR_AUTH_KEY = SECRET_KEY;
         
         // Tentar atualizar o arquivo .env se possível
         try {
             const envPath = path.join(__dirname, '.env');
             let envContent = fs.readFileSync(envPath, 'utf8');
-            if (envContent.includes('API_KEY=')) {
-                envContent = envContent.replace(/API_KEY=.*/, `API_KEY=${SECRET_KEY}`);
-                fs.writeFileSync(envPath, envContent);
-                console.log('✅ [PREFLIGHT] Arquivo .env atualizado programaticamente.');
+            
+            // Garantir que a nova variável exista no .env
+            if (envContent.includes('WARRIOR_AUTH_KEY=')) {
+                envContent = envContent.replace(/WARRIOR_AUTH_KEY=.*/, `WARRIOR_AUTH_KEY=${SECRET_KEY}`);
+            } else {
+                envContent += `\nWARRIOR_AUTH_KEY=${SECRET_KEY}`;
             }
+            
+            fs.writeFileSync(envPath, envContent);
+            console.log('✅ [PREFLIGHT] Arquivo .env atualizado programaticamente.');
         } catch (e) {
             console.error('⚠️ [PREFLIGHT] Não foi possível atualizar o .env fisicamente, usando em memória.');
         }
@@ -43,12 +48,12 @@ const preFlightCheck = async () => {
         const RELAY_URL = 'https://bot-wpp-relay.onrender.com'; // Forçado URL pública
         console.log(`🌐 [PREFLIGHT] Testando conexão e AUTH com Relay: ${RELAY_URL}`);
         
-        // Debug de API_KEY solicitado
-        const currentKey = process.env.API_KEY || '';
+        // Debug de WARRIOR_AUTH_KEY solicitado
+        const currentKey = process.env.WARRIOR_AUTH_KEY || '';
         const keyParts = currentKey.length >= 8 
             ? `${currentKey.substring(0, 4)}...${currentKey.substring(currentKey.length - 4)}`
-            : 'CHAVE_CURTA_INVALIDA';
-        console.log(`🔐 [PREFLIGHT] Debug de Chave Local: [${keyParts}]`);
+            : (currentKey ? 'CHAVE_PRESENTE_MAS_CURTA' : 'CHAVE_AUSENTE');
+        console.log(`🔐 [PREFLIGHT] Debug de Chave Local: [${keyParts}] (Len: ${currentKey.length})`);
         
         // Teste de Health
         const healthResponse = await axios.get(`${RELAY_URL}/health`, {
