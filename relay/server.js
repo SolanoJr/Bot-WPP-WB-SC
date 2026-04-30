@@ -46,17 +46,28 @@ const checkApiKey = (req, res, next) => {
 
 // CORS
 const allowedOrigins = ['https://bot-wpp-wb-sc.pages.dev', 'http://localhost:3000', 'https://bot-wpp-relay.onrender.com'];
-app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'x-api-key']
-}));
+
+// Middleware Manual de Pre-flight (Garante 204 imediato para CORS)
+app.use((req, res, next) => {
+    // Configurar headers de CORS manualmente para máxima compatibilidade
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    } else {
+        res.header('Access-Control-Allow-Origin', 'https://bot-wpp-wb-sc.pages.dev');
+    }
+    
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, x-api-key, Authorization, Cache-Control, Pragma, Expires');
+    res.header('Access-Control-Allow-Credentials', 'true');
+
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
+    next();
+});
+
+app.use(cors()); // Fallback para o pacote cors padrão
 
 app.use(express.json({ limit: '1mb' }));
 
