@@ -1,6 +1,6 @@
 {
   "name": "bot-wpp-relay",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Relay API para Bot WPP - Bridge público↔privado",
   "main": "server.js",
   "scripts": {
