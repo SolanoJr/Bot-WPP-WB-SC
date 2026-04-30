@@ -404,5 +404,5 @@ const startBot = async () => {
     }
 };
 
-// Iniciar bot
-startBot();
+// Exportar para uso no index.js
+module.exports = { startBot };
