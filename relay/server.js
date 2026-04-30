@@ -24,14 +24,25 @@ const checkApiKey = (req, res, next) => {
     
     if (providedKey !== API_KEY) {
         console.warn(`🔒 [SECURITY] Acesso negado em ${req.path} - Chave inválida`);
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
+        
+        // Debug de recebimento para ajudar o usuário a diagnosticar o erro no console do navegador
+        const receivedPart = providedKey && providedKey.length >= 8
+            ? `${providedKey.substring(0, 4)}...${providedKey.substring(providedKey.length - 4)}`
+            : (providedKey ? 'KEY_TOO_SHORT' : 'NULL');
+
+        return res.status(401).json({ 
+            success: false, 
+            error: 'auth_failed',
+            message: 'Unauthorized',
+            received_key: receivedPart
+        });
     }
     
     next();
 };
 
 // Middleware
-const allowedOrigins = ['https://bot-wpp-wb-sc.pages.dev', 'http://localhost:3000'];
+const allowedOrigins = ['https://bot-wpp-wb-sc.pages.dev', 'http://localhost:3000', 'https://bot-wpp-relay.onrender.com'];
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
@@ -41,7 +52,7 @@ app.use(cors({
         }
     },
     methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'x-api-key']
+    allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json({ limit: '10mb' }));
 
