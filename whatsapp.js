@@ -54,6 +54,7 @@ const preFlightCheck = async () => {
         }
         
         // Teste de Autenticação Real
+        console.log(`🔐 [PREFLIGHT] Usando API_KEY: ${process.env.API_KEY ? process.env.API_KEY.substring(0, 5) + '...' : 'Vazia'}`);
         try {
             await axios.get(`${RELAY_URL}/pending/auth_preflight_test`, {
                 timeout: 5000,
