@@ -13,6 +13,16 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://100.101.218.16:4010';
 const TAILSCALE_HOST = process.env.TAILSCALE_HOST || '100.101.218.16';
 const API_KEY = process.env.API_KEY || ''; // Chave de segurança
 
+// Endpoint de Debug (Temporário)
+app.get('/debug-auth', (req, res) => {
+    res.json({
+        hasApiKey: !!API_KEY,
+        apiKeyPrefix: API_KEY ? API_KEY.substring(0, 3) + '...' : 'none',
+        receivedHeaders: req.headers,
+        envKeys: Object.keys(process.env).filter(k => k.includes('API'))
+    });
+});
+
 // Middleware de Autenticação
 const checkApiKey = (req, res, next) => {
     const providedKey = req.headers['x-api-key'];
