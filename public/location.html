@@ -256,6 +256,8 @@
                 location: { latitude, longitude, accuracy }
             });
             
+            const apiKey = urlParams.get('apiKey') || '';
+            
             try {
                 // Usar URL do relay dinamicamente
                 const submitUrl = relayUrl ? 
@@ -279,7 +281,8 @@
                 const response = await fetch(submitUrl, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey
                     },
                     body: JSON.stringify(payload)
                 });
