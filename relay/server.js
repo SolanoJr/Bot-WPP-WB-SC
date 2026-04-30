@@ -41,7 +41,9 @@ const checkApiKey = (req, res, next) => {
             success: false, 
             error: 'auth_failed',
             message: 'Unauthorized',
-            received_key: receivedKey ? `${receivedKey.substring(0, 4)}...${receivedKey.substring(receivedKey.length - 4)}` : 'null'
+            received_key: receivedKey ? `${receivedKey.substring(0, 4)}...` : 'null',
+            received_len: receivedKey.length,
+            expected_len: expectedKey.length
         });
     }
     
