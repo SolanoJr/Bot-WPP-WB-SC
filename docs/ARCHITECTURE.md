@@ -25,22 +25,28 @@ graph TD
 - **Função**: Gerencia comandos, integração com Gemini IA e processa as localizações recebidas do Relay.
 - **Identificador PM2**: `WarriorBlack-Bot`.
 
-### 2. Relay Server (A Ponte)
-- **Localização**: PaaS Render.com.
-- **Tecnologia**: Express.js + SQLite.
-- **Função**: Atua como um buffer persistente e centralizador. Recebe dados do Frontend e os armazena até que o Bot os solicite via Polling.
-- **Segurança**: Autenticação via `x-api-key` e bypass de CORS para o domínio do Cloudflare.
+### 2. Relay (Render - Node.js v20)
+**Papel**: Buffer intermediário In-Memory.
+- **Tecnologia**: Express.js (Sem SQLite para evitar erros de GLIBC).
+- **Armazenamento**: Objetos JS voláteis (Buffer de 500 entradas).
+- **Segurança**: Middleware de Pre-flight manual para CORS e validação de `WARRIOR_AUTH_KEY`.
 
-### 3. Frontend Geolocation (A Interface)
-- **Localização**: Cloudflare Pages.
-- **Tecnologia**: HTML5 + Vanilla JS + Geolocation API.
-- **Função**: Página web minimalista e premium que captura as coordenadas GPS do usuário e as envia para o Relay.
+#### Estrutura de Dados (Memória):
+- `locations`: `Array<{ id, token, chatId, lat, lng, timestamp, userAgent, processed }>`
+- `clients`: `Map<chatId, { lastSeen, totalLocations }>`
+- `telemetry`: `Array<{ botNumber, botName, version, timestamp }>`
+
+### 3. Frontend (Cloudflare Pages)
+**Papel**: Interface de Coleta.
+- **Sanitização**: Lógica de remoção de portas na URL.
+- **Headers**: Injeção dinâmica de `x-api-key`.
 
 ---
 
-## 🔐 Fluxo de Autenticação
-
-Todas as comunicações entre os pilares são protegidas pela `API_KEY` (Chave de Elite):
+## 🔒 Fluxo de Autenticação (16 chars)
+1. Bot gera link com `warriorKey=solano_wb_gps_26`.
+2. Frontend lê a chave e envia no header `x-api-key`.
+3. Relay valida `received.trim() === expected.trim()`.
 
 1. **Bot -> Relay**: Envia a chave no header `x-api-key` em todas as requisições de Polling.
 2. **Frontend -> Relay**: A chave é passada via parâmetro de URL pelo Bot e injetada no header da requisição POST.

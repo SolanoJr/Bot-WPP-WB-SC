@@ -1,203 +1,44 @@
-# Bot-WPP-WB-SC
+# 🤖 WarriorBlack Bot - Geolocation System
 
-Bot de WhatsApp baseado em `whatsapp-web.js` com carregamento automatico de comandos, tratamento centralizado de respostas e testes automatizados.
+Sistema de geolocalização em tempo real integrado ao WhatsApp, utilizando uma arquitetura distribuída entre VPS (Bot), Render (Relay) e Cloudflare (Frontend).
 
-## 1. Descricao do projeto
+## 🏗️ Arquitetura Atual (v1.0.0-JS-STABLE)
 
-Este projeto inicia um cliente do WhatsApp Web, autentica via QR Code e executa comandos recebidos em mensagens com prefixo `!`.
+- **Bot (Linux VPS)**: Cliente WhatsApp Web que processa comandos e faz o polling de localizações.
+- **Relay (Render)**: Servidor Node.js (v20.x) agindo como buffer intermediário. **Arquitetura Pure JS (In-Memory)**, sem dependências nativas para evitar erros de GLIBC.
+- **Frontend (Cloudflare Pages)**: Interface web para captura de coordenadas GPS via navegador.
 
-Exemplos:
+## 🔐 Protocolo de Segurança
 
-- `!test`
-- `!ping`
-- `!info a b`
-- `!help`
+O sistema utiliza a chave **WARRIOR_AUTH_KEY** (16 caracteres) para autenticar todas as pontas:
+- **Frontend -> Relay**: POST `/location` com header `x-api-key`.
+- **Bot -> Relay**: GET `/pending/:chatId` com header `x-api-key`.
 
-## 2. Tecnologias usadas
+## 🚀 Configuração de Ambiente
 
-- Node.js
-- `whatsapp-web.js`
-- `qrcode-terminal`
-- Jest
-
-## 3. Requisitos
-
-- Node.js 18 ou superior
-- npm 9 ou superior
-- Conta do WhatsApp com acesso ao aplicativo para leitura do QR Code
-- Conexao com internet
-
-## 4. Instalacao passo a passo
-
-### Clonar o repositorio
-
-```bash
-git clone <URL_DO_REPOSITORIO>
-cd bot-wpp
+### Variáveis Necessárias (.env)
+```env
+WARRIOR_AUTH_KEY=solano_wb_gps_26
+RELAY_URL=https://bot-wpp-relay.onrender.com
+MASTER_USER=2026...4056@lid
 ```
 
-### Instalar dependencias
+### Portas e Endereços
+- **Relay**: Rodando em `https://bot-wpp-relay.onrender.com` (Porta padrão 443).
+- **Frontend**: Hospedado em `https://bot-wpp-wb-sc.pages.dev`.
 
-```bash
-npm install
-```
+## 🛠️ Scripts Disponíveis
 
-### Iniciar o bot
+- `npm start`: Inicia o Relay (específico para deploy no Render).
+- `npm run bot:start`: Inicia o Bot do WhatsApp.
+- `npm test`: Executa a suite de testes de integração e segurança.
 
-```bash
-npm start
-```
+## 🧠 Estrutura de Dados (In-Memory)
 
-### Autenticar no WhatsApp
+O Relay armazena temporariamente:
+- `locations`: Array circular (máx 500) de localizações pendentes.
+- `clients`: Map de metadados de usuários (visto por último, total de localizações).
+- `telemetry`: Logs de inicialização das instâncias do bot.
 
-1. Aguarde o terminal exibir `QR gerado`.
-2. Abra o WhatsApp no celular.
-3. Acesse `Dispositivos conectados`.
-4. Escaneie o QR Code exibido no terminal.
-5. Aguarde o log `Bot online`.
-
-## 5. Explicacao do fluxo
-
-### `index.js`
-
-Ponto de entrada da aplicacao. Importa o modulo principal e inicia o bot.
-
-### `whatsapp.js`
-
-Camada principal de orquestracao. Responsavel por:
-
-- carregar comandos da pasta `commands/`
-- validar mensagens com prefixo
-- extrair nome do comando e argumentos
-- montar o `context`
-- encaminhar a execucao para o executor central
-
-### `commands/`
-
-Contem os comandos do bot. Cada arquivo deve exportar:
-
-```js
-module.exports = {
-  name: 'nome-do-comando',
-  description: 'Descricao curta do comando',
-  async execute(msg, args, context) {
-    // logica do comando
-  }
-};
-```
-
-### `utils/`
-
-Contem funcoes auxiliares pequenas, como validacao de comandos.
-
-### `services/`
-
-Contem servicos centrais da aplicacao:
-
-- `replyService.js`: envio de texto e erro
-- `commandExecutor.js`: execucao padronizada de comandos
-
-## 6. Como adicionar um novo comando
-
-1. Crie um arquivo `.js` dentro de `commands/`
-2. Exporte um objeto com `name`, `description` e `execute`
-3. Use `context.replyService.sendText(context, 'sua resposta')` para responder
-
-Exemplo:
-
-```js
-module.exports = {
-  name: 'exemplo',
-  description: 'Comando de exemplo',
-
-  async execute(msg, args, context) {
-    void msg;
-
-    const totalArgs = args.length;
-    await context.replyService.sendText(
-      context,
-      `Comando exemplo executado com ${totalArgs} argumento(s).`
-    );
-  }
-};
-```
-
-Depois disso, reinicie o bot. O loader carrega automaticamente os arquivos validos da pasta `commands/`.
-
-## 7. Como rodar os testes
-
-```bash
-npm test
-```
-
-Os testes cobrem:
-
-- loader de comandos
-- parser de comandos e argumentos
-- fluxo de mensagens
-- cenarios de erro
-- servico de resposta
-- executor central
-
-## 8. Estrutura de pastas explicada
-
-```text
-bot-wpp/
-├─ commands/
-│  ├─ help.js
-│  ├─ info.js
-│  ├─ ping.js
-│  └─ test.js
-├─ services/
-│  ├─ commandExecutor.js
-│  └─ replyService.js
-├─ utils/
-│  ├─ validator.js
-│  └─ validator.test.js
-├─ index.js
-├─ whatsapp.js
-├─ whatsapp.test.js
-├─ package.json
-├─ package-lock.json
-└─ .gitignore
-```
-
-## 9. Observacoes importantes
-
-- Nao versione `.wwebjs_auth/`
-- Nao versione `.wwebjs_cache/`
-- Nao versione `node_modules/`
-- O estado de autenticacao do WhatsApp fica em `.wwebjs_auth/`
-- Se esse diretorio for apagado, sera necessario escanear o QR Code novamente
-
-## 10. Troubleshooting basico
-
-### O QR Code nao aparece
-
-- Confirme que o comando `npm start` foi executado na raiz do projeto
-- Verifique se as dependencias foram instaladas com `npm install`
-
-### O bot nao responde aos comandos
-
-- Verifique se o terminal exibiu `Bot online`
-- Confirme que a mensagem comeca com `!`
-- Confirme que o comando existe na pasta `commands/`
-- Reinicie o bot depois de adicionar ou alterar comandos
-
-### O bot responde erro ao executar comando
-
-- Rode `npm test`
-- Verifique o terminal para identificar o comando que falhou
-- Confirme se o comando usa `context.replyService.sendText(...)`
-
-### O WhatsApp pede novo QR Code
-
-- Isso normalmente indica perda da sessao local
-- Escaneie novamente o QR Code
-
-## Comandos atuais
-
-- `!help`: lista os comandos disponiveis
-- `!info`: mostra horario atual, id do chat e quantidade de argumentos
-- `!ping`: responde com `pong`
-- `!test`: responde com `comando test funcionando`
+---
+*Backup de estabilidade disponível na branch: `stable-js-working-v1`*
