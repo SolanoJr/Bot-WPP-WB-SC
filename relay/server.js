@@ -230,20 +230,32 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Receber localização do frontend (com SQLite)
-app.post('/location', async (req, res) => {
+// Receber localização do frontend (com SQLite e Auth)
+app.post('/location', checkApiKey, async (req, res) => {
     try {
-        const { token, chatId, location, userAgent, timestamp } = req.body;
+        // Log detalhado do body para debug (conforme solicitado pelo usuário)
+        console.log('📦 [RELAY] Payload recebido em /location:', JSON.stringify(req.body, null, 2));
+
+        let { token, chatId, location, userAgent, timestamp } = req.body;
         
-        console.log('📥 Localização recebida para o chatId:', chatId);
+        // Flexibilizar coordenadas: aceitar lat/lng (padrão Relay) ou latitude/longitude (padrão Frontend)
+        const lat = location?.lat || location?.latitude;
+        const lng = location?.lng || location?.longitude;
+
+        console.log(`📥 [RELAY] Processando localização - ChatId: ${chatId} | Lat: ${lat} | Lng: ${lng}`);
         
-        if (!location || !location.lat || !location.lng) {
+        if (!lat || !lng) {
+            console.error('❌ [RELAY] Erro: Coordenadas ausentes no payload (esperado lat/lng ou latitude/longitude)');
             return res.status(400).json({
                 success: false,
-                message: 'Coordenadas inválidas'
+                error: 'bad_request',
+                message: 'Coordenadas inválidas ou ausentes'
             });
         }
         
+        // Garantir que chatId seja tratado como string (suporte a @lid)
+        const cleanChatId = chatId ? String(chatId).trim() : 'unknown';
+
         // Inserir localização no SQLite
         const stmt = db.prepare(`
             INSERT INTO locations (token, chatId, latitude, longitude, timestamp, userAgent)
@@ -252,9 +264,9 @@ app.post('/location', async (req, res) => {
         
         stmt.run([
             token,
-            chatId,
-            location.lat,
-            location.lng,
+            cleanChatId,
+            lat,
+            lng,
             timestamp || new Date().toISOString(),
             userAgent
         ], function(err) {
@@ -262,7 +274,7 @@ app.post('/location', async (req, res) => {
                 console.error('❌ [DATABASE] Erro ao inserir localização:', err);
                 return res.status(500).json({
                     success: false,
-                    message: 'Erro ao salvar localização'
+                    message: 'Erro ao salvar localização no banco de dados'
                 });
             }
             
