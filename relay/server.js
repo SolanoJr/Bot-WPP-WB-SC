@@ -225,7 +225,9 @@ app.get('/health', (req, res) => {
         ok: true,
         service: 'bot-wpp-relay',
         timestamp: new Date().toISOString(),
-        backend: BACKEND_URL
+        backend: BACKEND_URL,
+        authConfigured: !!API_KEY,
+        authPrefix: API_KEY ? API_KEY.substring(0, 3) + '...' : 'none'
     });
 });
 
