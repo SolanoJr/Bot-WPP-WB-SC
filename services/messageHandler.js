@@ -51,7 +51,7 @@ async function handleCustomCommands(msg, client, commandName) {
             const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
             
             const response = await axios.get(`${RELAY_URL}/groups/${encodeURIComponent(groupId)}/config`, {
-                headers: { 'x-api-key': process.env.API_KEY || '' },
+                headers: { 'x-api-key': process.env.WARRIOR_AUTH_KEY || '' },
                 timeout: 5000
             });
             

@@ -21,7 +21,7 @@ module.exports = {
             '',
             'Para enviar sua localização em tempo real, clique no link abaixo:',
             '',
-            `🔗 ${INTERFACE_URL}?token=${token}&chatId=${encodeURIComponent(chatId)}&warriorKey=${process.env.WARRIOR_AUTH_KEY || 'solano_wb_gps_26'}&relay=https://bot-wpp-relay.onrender.com`,
+            `🔗 ${INTERFACE_URL}?token=${token}&chatId=${encodeURIComponent(chatId)}&warriorKey=${process.env.WARRIOR_AUTH_KEY || ''}&relay=https://bot-wpp-relay.onrender.com`,
             '',
             'O link expira assim que a localização for recebida.'
         ].join('\n');

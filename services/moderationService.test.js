@@ -1,4 +1,5 @@
-const moderationService = require('./moderationService');
+import { describe, beforeEach, test, expect } from 'vitest';
+import moderationService from './moderationService';
 
 describe('moderationService', () => {
     beforeEach(() => {

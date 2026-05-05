@@ -1,4 +1,5 @@
-const usageService = require('./usageService');
+import { describe, beforeEach, test, expect } from 'vitest';
+import usageService from './usageService';
 
 describe('usageService', () => {
     beforeEach(() => {

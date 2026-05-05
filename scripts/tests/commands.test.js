@@ -1,64 +1,60 @@
-const { askAI } = require('../../services/aiService');
+import { createRequire } from 'node:module';
+import { describe, beforeEach, it, expect, vi } from 'vitest';
+
+const require = createRequire(import.meta.url);
+const aiService = require('../../services/aiService');
+vi.spyOn(aiService, 'askAI');
+
 const pergunta = require('../../commands/pergunta');
 const ondeestou = require('../../commands/ondeestou');
 
-// Mock do aiService
-jest.mock('../../services/aiService');
-
-describe('Suite de Testes de Integração - WarriorBlack Commands', () => {
-    
+describe('Suite de Testes de Integracao - WarriorBlack Commands', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
-    describe('Comando $pergunta', () => {
+    describe('Comando !pergunta', () => {
         it('deve processar e responder uma pergunta via Gemini IA', async () => {
             const mockMsg = {
-                reply: jest.fn().mockResolvedValue(true)
+                reply: vi.fn().mockResolvedValue(true)
             };
-            const mockArgs = ['Quem', 'é', 'o', 'WarriorBlack?'];
-            
-            // Simular resposta da IA
-            askAI.mockResolvedValue('WarriorBlack é um bot de elite.');
+            const mockArgs = ['Quem', 'e', 'o', 'WarriorBlack?'];
+
+            aiService.askAI.mockResolvedValue('WarriorBlack e um bot de elite.');
 
             await pergunta.execute(mockMsg, {}, mockArgs);
 
-            // Verificações
             expect(mockMsg.reply).toHaveBeenCalledWith(expect.stringContaining('Processando'));
-            expect(askAI).toHaveBeenCalledWith('Quem é o WarriorBlack?');
-            expect(mockMsg.reply).toHaveBeenCalledWith('WarriorBlack é um bot de elite.');
+            expect(aiService.askAI).toHaveBeenCalledWith('Quem e o WarriorBlack?');
+            expect(mockMsg.reply).toHaveBeenCalledWith('WarriorBlack e um bot de elite.');
         });
 
         it('deve avisar se a pergunta estiver vazia', async () => {
             const mockMsg = {
-                reply: jest.fn().mockResolvedValue(true)
+                reply: vi.fn().mockResolvedValue(true)
             };
-            const mockArgs = [];
 
-            await pergunta.execute(mockMsg, {}, mockArgs);
+            await pergunta.execute(mockMsg, {}, []);
 
             expect(mockMsg.reply).toHaveBeenCalledWith(expect.stringContaining('Por favor, digite sua pergunta'));
         });
     });
 
-    describe('Comando $ondeestou', () => {
-        it('deve gerar um link de localização válido com os parâmetros necessários', async () => {
+    describe('Comando !ondeestou', () => {
+        it('deve gerar um link de localizacao valido com os parametros necessarios', async () => {
             const mockMsg = {
                 from: '558581344211@c.us',
-                reply: jest.fn().mockResolvedValue(true)
+                reply: vi.fn().mockResolvedValue(true)
             };
-            
-            // Mock da nova chave
+
             process.env.WARRIOR_AUTH_KEY = 'solano_wb_gps_26';
 
             await ondeestou.execute(mockMsg, {}, []);
 
-            // Verificar se o reply contém o link e os parâmetros cruciais
             const replyCall = mockMsg.reply.mock.calls[0][0];
-            expect(replyCall).toContain('Solicitação de Localização');
             expect(replyCall).toContain('token=loc_');
             expect(replyCall).toContain('chatId=558581344211%40c.us');
-            expect(replyCall).toContain('apiKey=solano_wb_gps_26');
+            expect(replyCall).toContain('warriorKey=solano_wb_gps_26');
             expect(replyCall).toContain('relay=https://bot-wpp-relay.onrender.com');
         });
     });

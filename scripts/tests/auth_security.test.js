@@ -1,5 +1,6 @@
-const request = require('supertest');
-const express = require('express');
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import express from 'express';
 
 // Importamos a lógica de auth diretamente do server.js (se estivesse exportada)
 // Como o server.js é um app completo, vamos simular o middleware para garantir que a LÓGICA está blindada.

@@ -13,35 +13,24 @@ let client;
 
 const COMMAND_PREFIX = '!';
 const commands = new Map();
+const WARRIOR_AUTH_KEY_LENGTH = 16;
+
+const getWarriorAuthKeyOrExit = () => {
+    const key = String(process.env.WARRIOR_AUTH_KEY || '').trim();
+
+    if (key.length !== WARRIOR_AUTH_KEY_LENGTH) {
+        console.error(`[BOT-CONFIG] WARRIOR_AUTH_KEY invalida: esperado exatamente ${WARRIOR_AUTH_KEY_LENGTH} caracteres, recebido ${key.length}.`);
+        console.error('[BOT-CONFIG] Corrija a WARRIOR_AUTH_KEY no ambiente/.env antes de iniciar o Bot.');
+        process.exit(1);
+    }
+
+    return key;
+};
 
 // 🔍 PREFLIGHT CHECK - Testa conexões críticas antes de iniciar
 const preFlightCheck = async () => {
     console.log('🔍 [PREFLIGHT] Iniciando verificações críticas...');
-    
-    // 0. Forçar Alinhamento de WARRIOR_AUTH_KEY (Requisito Elite)
-    const SECRET_KEY = 'solano_wb_gps_26';
-    if (process.env.WARRIOR_AUTH_KEY !== SECRET_KEY) {
-        console.warn(`⚠️  [PREFLIGHT] WARRIOR_AUTH_KEY desalinhada! Forçando valor padrão de Elite...`);
-        process.env.WARRIOR_AUTH_KEY = SECRET_KEY;
-        
-        // Tentar atualizar o arquivo .env se possível
-        try {
-            const envPath = path.join(__dirname, '.env');
-            let envContent = fs.readFileSync(envPath, 'utf8');
-            
-            // Garantir que a nova variável exista no .env
-            if (envContent.includes('WARRIOR_AUTH_KEY=')) {
-                envContent = envContent.replace(/WARRIOR_AUTH_KEY=.*/, `WARRIOR_AUTH_KEY=${SECRET_KEY}`);
-            } else {
-                envContent += `\nWARRIOR_AUTH_KEY=${SECRET_KEY}`;
-            }
-            
-            fs.writeFileSync(envPath, envContent);
-            console.log('✅ [PREFLIGHT] Arquivo .env atualizado programaticamente.');
-        } catch (e) {
-            console.error('⚠️ [PREFLIGHT] Não foi possível atualizar o .env fisicamente, usando em memória.');
-        }
-    }
+    const warriorAuthKey = getWarriorAuthKeyOrExit();
 
     try {
         // 1. Testar conexão e AUTENTICAÇÃO com Relay
@@ -49,7 +38,7 @@ const preFlightCheck = async () => {
         console.log(`🌐 [PREFLIGHT] Testando conexão e AUTH com Relay: ${RELAY_URL}`);
         
         // Debug de WARRIOR_AUTH_KEY solicitado
-        const currentKey = process.env.WARRIOR_AUTH_KEY || '';
+        const currentKey = warriorAuthKey;
         const keyParts = currentKey.length >= 8 
             ? `${currentKey.substring(0, 4)}...${currentKey.substring(currentKey.length - 4)}`
             : (currentKey ? 'CHAVE_PRESENTE_MAS_CURTA' : 'CHAVE_AUSENTE');
@@ -71,16 +60,15 @@ const preFlightCheck = async () => {
                 timeout: 5000,
                 headers: { 
                     'Accept': 'application/json',
-                    'x-api-key': process.env.API_KEY 
+                    'x-api-key': warriorAuthKey
                 }
             });
             console.log('✅ [PREFLIGHT] Autenticação com Relay: OK');
         } catch (authError) {
             if (authError.response && authError.response.status === 401) {
                 console.error('⚠️  [PREFLIGHT] ERRO DE AUTENTICAÇÃO (401)!');
-                console.error('🛑 A API_KEY do Bot parece não coincidir com a do Render.');
-                console.error('🛑 Continuando boot em modo degradado (sem geolocalização)...');
-                // process.exit(1); // Desabilitado conforme solicitação do usuário
+                console.error('🛑 A WARRIOR_AUTH_KEY do Bot não coincide com a do Render.');
+                process.exit(1);
             } else if (authError.response && (authError.response.status === 204 || authError.response.status === 404)) {
                 console.log('✅ [PREFLIGHT] Autenticação com Relay: OK (Key validada)');
             } else {
@@ -178,7 +166,7 @@ const initializeClient = async () => {
                         version
                     }, { 
                         timeout: 10000,
-                        headers: { 'x-api-key': process.env.WARRIOR_AUTH_KEY || 'solano_wb_gps_26' }
+                        headers: { 'x-api-key': getWarriorAuthKeyOrExit() }
                     });
                 } catch (error) {
                     console.log(`⚠️ [TELEMETRY] Erro ao enviar dados ao Relay: ${error.message}`);
@@ -199,7 +187,7 @@ const initializeClient = async () => {
                             name: chat.name,
                             isActive: 1
                         }, {
-                            headers: { 'x-api-key': process.env.WARRIOR_AUTH_KEY || 'solano_wb_gps_26' }
+                            headers: { 'x-api-key': getWarriorAuthKeyOrExit() }
                         });
                     }
                 } catch (error) {
@@ -252,7 +240,7 @@ const startLocationPolling = () => {
                         timeout: 5000,
                         headers: { 
                             'Accept': 'application/json',
-                            'x-api-key': process.env.WARRIOR_AUTH_KEY || 'solano_wb_gps_26'
+                            'x-api-key': getWarriorAuthKeyOrExit()
                         }
                     });
 
