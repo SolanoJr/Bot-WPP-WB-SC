@@ -20,19 +20,40 @@ class WhatsAppSingleton {
     // � Limpar processos Chrome zumbis
     async cleanupOrphanedProcesses() {
         const { execSync } = require('child_process');
-        
+        const isWindows = process.platform === 'win32';
+
         try {
             console.log(`🧹 [SINGLETON] Limpando processos Chrome zumbis...`);
-            
-            // Apenas limpar Chrome de forma agressiva
-            execSync('pkill -9 -f chrome 2>/dev/null || true', { timeout: 5000 });
-            execSync('pkill -9 -f puppeteer 2>/dev/null || true', { timeout: 5000 });
-            
+
+            if (isWindows) {
+                try {
+                    execSync('taskkill /F /IM chrome.exe /T', { timeout: 10000 });
+                } catch (_error) {
+                    // Ignorar se não existir chrome.exe
+                }
+                try {
+                    execSync('taskkill /F /IM msedge.exe /T', { timeout: 10000 });
+                } catch (_error) {
+                    // Ignorar se não existir msedge.exe
+                }
+            } else {
+                try {
+                    execSync('pkill -9 -f chrome', { timeout: 5000 });
+                } catch (_error) {
+                    // Ignorar se nenhum processo encontrado
+                }
+                try {
+                    execSync('pkill -9 -f puppeteer', { timeout: 5000 });
+                } catch (_error) {
+                    // Ignorar se nenhum processo encontrado
+                }
+            }
+
             // Pequena pausa para garantir limpeza
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
             console.log(`✅ [SINGLETON] Limpeza concluída`);
-            
+
         } catch (error) {
             console.log(`⚠️  [SINGLETON] Erro na limpeza: ${error.message}`);
         }

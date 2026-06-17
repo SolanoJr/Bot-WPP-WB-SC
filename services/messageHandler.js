@@ -26,11 +26,14 @@ async function processMessage(msg, client, commands) {
     if (intercepted) return;
 
     // 4. Processamento de Comandos
-    const COMMAND_PREFIX = process.env.COMMAND_PREFIX || '!';
-    
-    if (!msg.body.startsWith(COMMAND_PREFIX)) return;
+    const configuredPrefix = (process.env.COMMAND_PREFIX || '!').trim();
+    const alternatePrefix = configuredPrefix === '$' ? '!' : '$';
+    const prefixes = [configuredPrefix, alternatePrefix];
+    const prefix = prefixes.find((p) => msg.body.startsWith(p));
 
-    const args = msg.body.slice(COMMAND_PREFIX.length).trim().split(/ +/);
+    if (!prefix) return;
+
+    const args = msg.body.slice(prefix.length).trim().split(/ +/);
     const commandName = args.shift().toLowerCase();
     const command = commands.get(commandName);
 

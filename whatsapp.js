@@ -362,17 +362,28 @@ const startLocationPolling = () => {
     // Expor pendingChatIds globalmente para os comandos acessarem
     global.pendingChatIds = pendingChatIds;
 
-    // Adicionar chatId de teste manualmente para debug
-    setTimeout(() => {
-        if (pendingChatIds.size === 0) {
-            pendingChatIds.add('558581344211@c.us');
-            console.log('🧪 [DEBUG] ChatId de teste adicionado manualmente');
+    let isChecking = false;
+    const scheduleNextCheck = async () => {
+        if (isChecking) {
+            console.log('⚠️  [POLLING] Verificação anterior ainda em andamento, pulando ciclo.');
+            setTimeout(scheduleNextCheck, POLLING_INTERVAL);
+            return;
         }
-    }, 5000);
+
+        isChecking = true;
+        try {
+            await checkPendingLocations();
+        } catch (error) {
+            console.error(`❌ [POLLING] Erro inesperado no ciclo: ${error.message}`);
+        } finally {
+            isChecking = false;
+            setTimeout(scheduleNextCheck, POLLING_INTERVAL);
+        }
+    };
 
     // Iniciar polling
     console.log(`🔄 [POLLING] Iniciando verificação de localizações a cada ${POLLING_INTERVAL/1000}s`);
-    setInterval(checkPendingLocations, POLLING_INTERVAL);
+    scheduleNextCheck();
 };
 
 // Inicializar sistema com verificações críticas
