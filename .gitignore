@@ -22,7 +22,12 @@ credentials.json
 *.session
 *.store
 
-# 📊 RELATÓRIOS E TEMP
+# � ARTEFATOS LOCAIS
+.env.backup
+.whatsapp-instance.lock
+scripts/logs/
+
+# �📊 RELATÓRIOS E TEMP
 *.tmp
 *.temp
 .DS_Store
