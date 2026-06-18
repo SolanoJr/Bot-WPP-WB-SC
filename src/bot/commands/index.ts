@@ -1,4 +1,5 @@
 import { ICommand } from './types';
+import { feedbackCommand } from './feedback';
 import { helpCommand } from './help';
 import { menuCommand } from './menu';
 import { pingCommand } from './ping';
@@ -48,6 +49,7 @@ export function loadCommands(): Map<string, ICommand> {
     registerCommand(velhaCommand);
     registerCommand(sorteioCommand);
     registerCommand(climaCommand);
+    registerCommand(feedbackCommand);
     registerCommand(nickCommand);
     registerCommand(gttsCommand);
     // New commands from astabot
@@ -65,5 +67,5 @@ export function loadCommands(): Map<string, ICommand> {
 }
 
 // Exportar comandos individuais para uso em testes
-export { helpCommand, menuCommand, pingCommand, aliveCommand, banCommand, kickCommand, muteCommand, promoteCommand, forcaCommand, velhaCommand, sorteioCommand, climaCommand, nickCommand, gttsCommand };
+export { helpCommand, menuCommand, pingCommand, aliveCommand, banCommand, kickCommand, muteCommand, promoteCommand, forcaCommand, velhaCommand, sorteioCommand, climaCommand, feedbackCommand, nickCommand, gttsCommand };
 export { jokesCommand, voteCommand, delVoteCommand, votoCommand, addCmdCommand, antispamCommand, conselhoCommand, conselhobCommand, aleatoriaCommand };
