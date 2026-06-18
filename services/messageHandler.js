@@ -26,10 +26,8 @@ async function processMessage(msg, client, commands) {
     if (intercepted) return;
 
     // 4. Processamento de Comandos
-    const configuredPrefix = (process.env.COMMAND_PREFIX || '!').trim();
-    const alternatePrefix = configuredPrefix === '$' ? '!' : '$';
-    const prefixes = [configuredPrefix, alternatePrefix];
-    const prefix = prefixes.find((p) => msg.body.startsWith(p));
+    // Prefixo único: $ (comando customizado também usa $)
+    const prefix = '$';
 
     if (!prefix) return;
 

@@ -5,11 +5,13 @@
   "main": "index.js",
   "scripts": {
     "dev:relay": "tsx watch src/relay/server.ts",
-    "build": "npm run build:relay",
+    "build": "npm run build:relay && npm run build:bot",
     "build:relay": "tsup src/relay/server.ts --out-dir dist/relay --format cjs --clean --minify",
+    "build:bot": "tsup src/bot/**/*.ts --out-dir dist/bot --format cjs --clean --minify",
     "start": "node dist/relay/server.js",
     "bot:start": "node index.js",
     "test": "vitest run",
+    "test-commands": "node test_commands.js",
     "test:watch": "vitest"
   },
   "engines": {

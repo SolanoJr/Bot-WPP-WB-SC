@@ -8,11 +8,15 @@ require('dotenv').config();
 const whatsappSingleton = require('./services/whatsappSingleton');
 const { isMaster } = require('./services/permissions');
 
+// Importar carregador de comandos TypeScript
+const { loadCommands } = require('./dist/bot/commands/index.js');
+const { processMessage } = require('./services/messageHandler');
+
 // Obter instância única de forma assíncrona
 let client;
 
-const COMMAND_PREFIX = '!';
-const commands = new Map();
+// Carregar comandos do TypeScript
+const commands = loadCommands();
 const WARRIOR_AUTH_KEY_LENGTH = 16;
 
 const getWarriorAuthKeyOrExit = () => {
@@ -32,187 +36,71 @@ const preFlightCheck = async () => {
     console.log('🔍 [PREFLIGHT] Iniciando verificações críticas...');
     const warriorAuthKey = getWarriorAuthKeyOrExit();
 
+    // Debug da chave
+    const keyParts = warriorAuthKey.length >= 8
+        ? `${warriorAuthKey.substring(0, 4)}...${warriorAuthKey.substring(warriorAuthKey.length - 4)}`
+        : (warriorAuthKey ? 'CHAVE_PRESENTE_MAS_CURTA' : 'CHAVE_AUSENTE');
+    console.log(`🔐 [PREFLIGHT] Debug de Chave Local: [${keyParts}] (Len: ${warriorAuthKey.length})`);
+
+    const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
+    console.log(`🌐 [PREFLIGHT] Testando conexão com Relay: ${RELAY_URL}`);
+
+    // -------- Health (não bloqueante) --------
+    let healthOk = false;
     try {
-        // 1. Testar conexão e AUTENTICAÇÃO com Relay
-        const RELAY_URL = 'https://bot-wpp-relay.onrender.com'; // Forçado URL pública
-        console.log(`🌐 [PREFLIGHT] Testando conexão e AUTH com Relay: ${RELAY_URL}`);
-        
-        // Debug de WARRIOR_AUTH_KEY solicitado
-        const currentKey = warriorAuthKey;
-        const keyParts = currentKey.length >= 8 
-            ? `${currentKey.substring(0, 4)}...${currentKey.substring(currentKey.length - 4)}`
-            : (currentKey ? 'CHAVE_PRESENTE_MAS_CURTA' : 'CHAVE_AUSENTE');
-        console.log(`🔐 [PREFLIGHT] Debug de Chave Local: [${keyParts}] (Len: ${currentKey.length})`);
-        
-        // Teste de Health
         const healthResponse = await axios.get(`${RELAY_URL}/health`, {
-            timeout: 10000,
-            headers: { 'Accept': 'application/json' }
+            timeout: 5000,
+            headers: { Accept: 'application/json' },
         });
-        
-        if (healthResponse.status !== 200) {
-            throw new Error(`Relay Health retornou status ${healthResponse.status}`);
+        if (healthResponse.status === 200) {
+            healthOk = true;
+            console.log('✅ [PREFLIGHT] Relay Health OK - Status:', healthResponse.data.status);
         }
-        
-        // Teste de Autenticação Real
+    } catch (e) {
+        console.warn('⚠️ [PREFLIGHT] Falha ao checar health do Relay (continua).', e.message);
+    }
+
+    // -------- Autenticação (se health ok) --------
+    if (healthOk) {
         try {
             await axios.get(`${RELAY_URL}/pending/auth_preflight_test`, {
                 timeout: 5000,
-                headers: { 
-                    'Accept': 'application/json',
-                    'x-api-key': warriorAuthKey
-                }
+                headers: { Accept: 'application/json', 'x-api-key': warriorAuthKey },
             });
             console.log('✅ [PREFLIGHT] Autenticação com Relay: OK');
         } catch (authError) {
             if (authError.response && authError.response.status === 401) {
                 console.error('⚠️  [PREFLIGHT] ERRO DE AUTENTICAÇÃO (401)!');
-                console.error('🛑 A WARRIOR_AUTH_KEY do Bot não coincide com a do Render.');
+                console.error('🛑 A WARRIOR_AUTH_KEY do Bot não coincide com a do Relay.');
                 process.exit(1);
-            } else if (authError.response && (authError.response.status === 204 || authError.response.status === 404)) {
-                console.log('✅ [PREFLIGHT] Autenticação com Relay: OK (Key validada)');
             } else {
-                console.warn(`⚠️  [PREFLIGHT] Falha ao validar Auth: ${authError.message}`);
+                console.warn('⚠️ [PREFLIGHT] Falha ao validar Auth:', authError.message);
             }
         }
-        
-        console.log('✅ [PREFLIGHT] Relay Health OK - Status:', healthResponse.data.status);
-        
-        // 2. Verificar variáveis de ambiente críticas
-        const requiredVars = ['MASTER_USER', 'GEMINI_API_KEY'];
-        const missingVars = requiredVars.filter(varName => !process.env[varName]);
-        
-        if (missingVars.length > 0) {
-            console.warn(`⚠️  [PREFLIGHT] Variáveis críticas ausentes: ${missingVars.join(', ')}`);
-        } else {
-            console.log('✅ [PREFLIGHT] Variáveis de ambiente OK');
-        }
-        
-        // 3. Verificar sistema de arquivos
-        const authPath = path.join(__dirname, '.wwebjs_auth');
-        if (!fs.existsSync(authPath)) {
-            console.log('📁 [PREFLIGHT] Criando pasta de autenticação...');
-            fs.mkdirSync(authPath, { recursive: true });
-        }
-        
-        console.log('✅ [PREFLIGHT] Sistema de arquivos OK');
-        
-        // 4. Verificar MASTER_USER
-        console.log(`✅ [PREFLIGHT] MASTER configurado: ${process.env.MASTER_USER}`);
-        
-        console.log('🎉 [PREFLIGHT] Todas as verificações passaram!');
-        return true;
-        
-    } catch (error) {
-        console.error('❌ [PREFLIGHT] Falha crítica:', error.message);
-        console.error('🛑 [PREFLIGHT] O bot NÃO será iniciado devido a falhas críticas.');
-        process.exit(1);
     }
-};
 
-// Carregamento dinâmico
-const commandsPath = path.join(__dirname, 'commands');
-if (fs.existsSync(commandsPath)) {
-    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-    for (const file of commandFiles) {
-        try {
-            const module = require(`./commands/${file}`);
-            // Suportar exportação de array de comandos ou objeto único
-            const commandList = Array.isArray(module) ? module : [module];
-            
-            for (const command of commandList) {
-                if (command.name) {
-                    commands.set(command.name, command);
-                    console.log(`[LOAD] ${command.name} carregado.`);
-                }
-            }
-        } catch (err) {
-            console.error(`[ERR] ${file}:`, err.message);
-        }
+    // -------- Variáveis de ambiente críticas --------
+    const requiredVars = ['MASTER_USER', 'GEMINI_API_KEY'];
+    const missingVars = requiredVars.filter(v => !process.env[v]);
+    if (missingVars.length) {
+        console.warn('⚠️ [PREFLIGHT] Variáveis críticas ausentes:', missingVars.join(', '));
+    } else {
+        console.log('✅ [PREFLIGHT] Variáveis de ambiente OK');
     }
-}
 
-const { processMessage } = require('./services/messageHandler');
-
-// ✅ Eventos já configurados no singleton - não duplicar
-
-// Inicializar client e configurar eventos
-const initializeClient = async () => {
-    try {
-        client = await whatsappSingleton.getClient();
-        console.log(`🚯 [WHATSAPP] Usando singleton global: ${whatsappSingleton.getStatus().instanceId}`);
-        
-        // Configurar eventos de mensagem APÓS client estar disponível
-        client.on('message', async (msg) => {
-            // HANDLER CENTRALIZADO E MODULAR
-            await processMessage(msg, client, commands);
-        });
-        
-        // Configurar telemetria ao iniciar
-        client.on('ready', async () => {
-            try {
-                const botNumber = client.info?.wid?.user || 'unknown';
-                const botName = client.info?.pushname || 'Bot WPP';
-                let version = '1.0.0';
-                try {
-                    version = require('./package.json').version || '1.0.0';
-                } catch(e) {}
-                
-                const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
-                
-                    await axios.post(`${RELAY_URL}/telemetry`, {
-                        botNumber,
-                        botName,
-                        version
-                    }, { 
-                        timeout: 10000,
-                        headers: { 'x-api-key': getWarriorAuthKeyOrExit() }
-                    });
-                } catch (error) {
-                    console.log(`⚠️ [TELEMETRY] Erro ao enviar dados ao Relay: ${error.message}`);
-                }
-            });
-
-            // 🔗 TELEMETRIA DE ENTRADA EM GRUPO
-            client.on('group_join', async (notification) => {
-                try {
-                    // Se o próprio bot entrou
-                    if (notification.recipientIds.includes(client.info.wid._serialized)) {
-                        const chat = await client.getChatById(notification.chatId);
-                        const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
-                        
-                        console.log(`🆕 [GROUP] Bot entrou no grupo: ${chat.name}`);
-                        
-                        await axios.post(`${RELAY_URL}/groups/${encodeURIComponent(chat.id._serialized)}/config`, {
-                            name: chat.name,
-                            isActive: 1
-                        }, {
-                            headers: { 'x-api-key': getWarriorAuthKeyOrExit() }
-                        });
-                    }
-                } catch (error) {
-                    console.error('❌ Erro na telemetria de grupo:', error.message);
-                }
-            });
-
-        // 🔄 KEEP-ALIVE AVANÇADO (Ping a cada 12 horas)
-        setInterval(async () => {
-            try {
-                const RELAY_URL = process.env.RELAY_URL || 'https://bot-wpp-relay.onrender.com';
-                console.log('💓 [KEEP-ALIVE] Enviando ping para o Relay...');
-                await axios.get(`${RELAY_URL}/health`).catch(() => {});
-            } catch (e) {
-                console.error('❌ [KEEP-ALIVE] Falha no ping:', e.message);
-            }
-        }, 12 * 60 * 60 * 1000); // 12 horas
-
-        // Inicializar o client
-        client.initialize();
-        
-    } catch (error) {
-        console.error('❌ [WHATSAPP] Erro ao obter client do singleton:', error.message);
-        process.exit(1);
+    // -------- Sistema de arquivos --------
+    const authPath = path.join(__dirname, '.wwebjs_auth');
+    if (!fs.existsSync(authPath)) {
+        console.log('📁 [PREFLIGHT] Criando pasta de autenticação...');
+        fs.mkdirSync(authPath, { recursive: true });
     }
+    console.log('✅ [PREFLIGHT] Sistema de arquivos OK');
+
+    // -------- MASTER_USER --------
+    console.log(`✅ [PREFLIGHT] MASTER configurado: ${process.env.MASTER_USER}`);
+
+    console.log('🎉 [PREFLIGHT] Verificações concluídas (continua mesmo com falhas).');
+    return true;
 };
 
 // 🔄 POLLING DO RELAY PARA LOCALIZAÇÕES PENDENTES
@@ -399,12 +287,44 @@ const startBot = async () => {
         setTimeout(() => {
             startLocationPolling();
         }, 15000); // Aguardar 15s para garantir que client está pronto
-        
+
+        // Mantém o processo ativo indefinidamente. O polling (setInterval) já impede o exit,
+        // mas ao final do fluxo assíncrono o Node pode encerrar antes que o intervalo seja
+        // registrado. Esse await garante que o event loop continue vivo.
+        await new Promise(() => {});
     } catch (error) {
         console.error('🛑 [BOT] Falha na inicialização:', error.message);
         process.exit(1);
     }
 };
+
+// ---------------------------------------------------------------------------
+// Função responsável por obter a instância única do WhatsApp via singleton e
+// conectar os handlers necessários (mensagens, telemetry etc.).
+// Declarada como *function* para que seja hoisted e possa ser usada antes da
+// sua definição no código (chamada dentro de `startBot`).
+// ---------------------------------------------------------------------------
+function initializeClient() {
+    return (async () => {
+        // Obtém (ou cria) o cliente singleton
+        client = await whatsappSingleton.getClient();
+        console.log('✅ [WHATSAPP] Cliente obtido com sucesso');
+
+        // Registro de eventos de mensagem usando o handler centralizado
+        client.on('message', async (msg) => {
+            await processMessage(msg, client, commands);
+        });
+
+        // Telemetria de ready (mantida aqui para compatibilidade) – já está no
+        // singleton, mas deixamos um log adicional
+        client.on('ready', () => {
+            console.log('🚀 [WHATSAPP] Bot está pronto e conectado');
+        });
+
+        // Inicializa a sessão do WhatsApp
+        client.initialize();
+    })();
+}
 
 // Exportar para uso no index.js
 module.exports = { startBot };
