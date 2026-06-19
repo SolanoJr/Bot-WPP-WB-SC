@@ -2,6 +2,7 @@ import { ICommand } from './types';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import { MessageMedia } from 'whatsapp-web.js';
 
 export const gttsCommand: ICommand = {
     name: 'gtts',
@@ -42,8 +43,9 @@ export const gttsCommand: ICommand = {
             const audioPath = path.join(tempDir, `tts_${Date.now()}.mp3`);
             fs.writeFileSync(audioPath, response.data);
 
-            // Enviar como mensagem de áudio
-            await client.sendMessage(msg.from, audioPath, { sendAudioAsVoice: true });
+            // Enviar como mensagem de áudio usando MessageMedia
+            const media = MessageMedia.fromFilePath(audioPath);
+            await client.sendMessage(msg.from, media, { sendAudioAsVoice: true });
 
             // Limpar arquivo temporário após envio
             setTimeout(() => {
