@@ -26,6 +26,11 @@ import { perguntaCommand } from './pergunta';
 import { sendMessageCommand } from './sendMessage';
 import { ondeEstouCommand } from './ondeestou';
 import { jogosCommand } from './jogos';
+import { alarmeCommand } from './alarme';
+import { lembreteCommand } from './lembrete';
+import { bemvindoCommand } from './bemvindo';
+import { shutdownCommand } from './shutdown';
+import { infoCommand } from './info';
 
 // Registro de todos os comandos
 export const commands: Map<string, ICommand> = new Map();
@@ -75,6 +80,11 @@ export function loadCommands(): Map<string, ICommand> {
     registerCommand(conselhoCommand);
     registerCommand(conselhobCommand);
     registerCommand(aleatoriaCommand);
+    registerCommand(alarmeCommand);
+    registerCommand(lembreteCommand);
+    registerCommand(bemvindoCommand);
+    registerCommand(shutdownCommand);
+    registerCommand(infoCommand);
     
     return commands;
 }
