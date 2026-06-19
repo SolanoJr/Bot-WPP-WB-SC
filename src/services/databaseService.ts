@@ -1,5 +1,5 @@
 import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import { open, Database } from 'sqlite';
 import path from 'path';
 import fs from 'fs';
 
@@ -16,7 +16,7 @@ const dbPath = path.join(DB_DIR, DB_FILE);
 export async function initDatabase() {
   const db = await open({
     filename: dbPath,
-    driver: sqlite3.CJS
+    driver: sqlite3.Database
   });
 
   // Tabela de Logs de Comandos (Estatísticas)
