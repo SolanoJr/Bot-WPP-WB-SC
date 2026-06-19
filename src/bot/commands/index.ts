@@ -24,6 +24,8 @@ import { conselhobCommand } from './conselhob';
 import { aleatoriaCommand } from './aleatoria';
 import { perguntaCommand } from './pergunta';
 import { sendMessageCommand } from './sendMessage';
+import { ondeEstouCommand } from './ondeestou';
+import { jogosCommand } from './jogos';
 
 // Registro de todos os comandos
 export const commands: Map<string, ICommand> = new Map();
@@ -35,6 +37,8 @@ export function registerCommand(command: ICommand): void {
 
 // Função para carregar todos os comandos
 export function loadCommands(): Map<string, ICommand> {
+    commands.clear();
+
     // Comandos básicos
     registerCommand(helpCommand);
     registerCommand(menuCommand);
@@ -55,6 +59,8 @@ export function loadCommands(): Map<string, ICommand> {
     registerCommand(feedbackCommand);
     registerCommand(statsCommand);
     registerCommand(perguntaCommand);
+    registerCommand(ondeEstouCommand);
+    registerCommand(jogosCommand);
     // comando para enviar mensagem arbitrária
     registerCommand(sendMessageCommand);
     registerCommand(nickCommand);
@@ -74,5 +80,5 @@ export function loadCommands(): Map<string, ICommand> {
 }
 
 // Exportar comandos individuais para uso em testes
-export { helpCommand, menuCommand, pingCommand, aliveCommand, banCommand, kickCommand, muteCommand, promoteCommand, forcaCommand, velhaCommand, sorteioCommand, climaCommand, feedbackCommand, statsCommand, perguntaCommand, nickCommand, gttsCommand };
+export { helpCommand, menuCommand, pingCommand, aliveCommand, banCommand, kickCommand, muteCommand, promoteCommand, forcaCommand, velhaCommand, sorteioCommand, climaCommand, feedbackCommand, statsCommand, perguntaCommand, nickCommand, gttsCommand, ondeEstouCommand, jogosCommand };
 export { jokesCommand, voteCommand, delVoteCommand, votoCommand, addCmdCommand, antispamCommand, conselhoCommand, conselhobCommand, aleatoriaCommand };

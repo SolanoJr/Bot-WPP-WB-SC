@@ -29,7 +29,7 @@ export function loadBotConfig(env: NodeJS.ProcessEnv = process.env): IBotConfig 
     return {
         warriorAuthKey,
         relayUrl: (env.RELAY_URL || 'https://bot-wpp-relay.onrender.com').trim(),
-        commandPrefix: (env.COMMAND_PREFIX || '!').trim(),
+        commandPrefix: (env.COMMAND_PREFIX || '$').trim(),
         masterUser: env.MASTER_USER,
         geminiApiKey: env.GEMINI_API_KEY
     };

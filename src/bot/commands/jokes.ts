@@ -1,5 +1,5 @@
 import { ICommand } from './types';
-import { pia } from './piadas.js';
+import { pia } from './piadas';
 
 export const jokesCommand: ICommand = {
   name: 'piada',

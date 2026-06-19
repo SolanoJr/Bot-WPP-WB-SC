@@ -4,57 +4,58 @@ export const menuCommand: ICommand = {
     name: 'menu',
     description: 'Exibe o menu principal do bot',
     async execute(msg, client, args) {
-        // Cálculo de Uptime
         const uptimeSeconds = process.uptime();
         const hours = Math.floor(uptimeSeconds / 3600);
         const minutes = Math.floor((uptimeSeconds % 3600) / 60);
         const uptimeStr = `${hours}h ${minutes}m`;
 
-        // Nível de Bateria
-        let batteryStr = 'N/A';
-        try {
-            if (client && client.info) {
-                if (typeof client.info.getBatteryStatus === 'function') {
-                    const batteryData = await client.info.getBatteryStatus();
-                    batteryStr = batteryData && batteryData.battery !== undefined ? `${batteryData.battery}%` : 'N/A';
-                } else if (client.info.battery !== undefined) {
-                    batteryStr = `${client.info.battery}%`;
-                }
-            }
-        } catch (e) {}
-
         const menu = [
             "╔════════════════════════╗",
             "║          🤖 BOT         ║",
             "╠════════════════════════╣",
-            `║ 🕒 Uptime: ${uptimeStr} | 🔋 Bat: ${batteryStr}`,
+            `║ 🕒 Uptime: ${uptimeStr} | ✅ Online`,
             "║",
-            "║ 📝 Prefixos aceitos:",
-            "║ ▸ $ ou !",
+            "║ 📝 Prefixo aceito:",
+            "║ ▸ $",
             "║",
-            "║ 🛠️ **ADMIN**",
-            "║ ▸ $stats / !stats - Estatísticas",
-            "║ ▸ $banidos / !banidos - Lista de bans",
-            "║ ▸ $grupos / !grupos - Gestão de chats",
-            "║ ▸ $antispam / !antispam - Segurança",
+            "║ 🛠️ ADMIN",
+            "║ ▸ $stats - Estatísticas",
+            "║ ▸ $antispam - Teste de limite",
+            "║ ▸ $ban - Banir membro",
+            "║ ▸ $kick - Remover membro",
+            "║ ▸ $mute - Silenciar membro",
+            "║ ▸ $promover - Tornar admin",
             "║",
-            "║ 👤 **USUÁRIO**",
-            "║ ▸ $info - Sobre o bot",
-            "║ ▸ $feedback - Sugestões",
+            "║ 👤 USUÁRIO",
             "║ ▸ $ping - Status conexão",
+            "║ ▸ $alive - Status do bot",
+            "║ ▸ $help - Lista resumida",
+            "║ ▸ $feedback - Sugestões",
+            "║ ▸ $ondeestou - Enviar localização",
             "║",
-            "║ 🧠 **INTELIGÊNCIA**",
+            "║ 🧠 INTELIGÊNCIA",
             "║ ▸ $pergunta - Falar com IA",
-            "║ ▸ $noticias - Top notícias",
             "║",
-            "║ 🎮 **DIVERSÃO**",
-            "║ ▸ $cantada - Conquista",
-            "║ ▸ $conselho - Sabedoria",
-            "║ ▸ $fakechat - Simulação",
+            "║ 🎮 JOGOS E DIVERSÃO",
+            "║ ▸ $jogos - Lista de jogos",
+            "║ ▸ $forca - Jogo da forca",
+            "║ ▸ $velha - Jogo da velha",
+            "║ ▸ $sorteio - Sorteio simples",
+            "║ ▸ $piada - Piada aleatória",
+            "║ ▸ $conselho - Conselho",
+            "║ ▸ $aleatoria - Mensagem aleatória",
+            "║ ▸ $votar / $voto / $delvoto",
+            "║",
+            "║ 🔧 UTILITÁRIOS",
+            "║ ▸ $clima - Clima",
+            "║ ▸ $nick - Apelido",
+            "║ ▸ $gtts - Texto para voz",
+            "║ ▸ $sendmsg - Enviar mensagem",
+            "║ ▸ $addcmd - Comando customizado",
             "║",
             "╚════════════════════════╝",
             "",
-            "_Dica: Use $ajuda [comando] para detalhes._"
+            "_Dica: o bot aceita somente comandos iniciados com $_"
         ].join('\n');
 
         await msg.reply(menu);

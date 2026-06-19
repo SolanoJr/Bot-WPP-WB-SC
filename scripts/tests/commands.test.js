@@ -13,7 +13,7 @@ describe('Suite de Testes de Integracao - WarriorBlack Commands', () => {
         vi.clearAllMocks();
     });
 
-    describe('Comando !pergunta', () => {
+    describe('Comando $pergunta', () => {
         it('deve processar e responder uma pergunta via Gemini IA', async () => {
             const mockMsg = {
                 reply: vi.fn().mockResolvedValue(true)
@@ -40,7 +40,7 @@ describe('Suite de Testes de Integracao - WarriorBlack Commands', () => {
         });
     });
 
-    describe('Comando !ondeestou', () => {
+    describe('Comando $ondeestou', () => {
         it('deve gerar um link de localizacao valido com os parametros necessarios', async () => {
             const mockMsg = {
                 from: '558581344211@c.us',

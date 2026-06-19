@@ -8,15 +8,18 @@ export const helpCommand: ICommand = {
         const response = [
             '🤖 *Comandos Disponíveis:*',
             '',
-            'Digite $ seguido do nome do comando',
+            'Digite $ seguido do nome do comando.',
             '',
             '📋 Comandos Principais:',
             '  $help - Lista os comandos',
             '  $menu - Menu principal',
             '  $ping - Testa conexão',
             '  $alive - Verifica se o bot está online',
+            '  $ondeestou - Gera link de localização',
+            '  $pergunta - Pergunta para a IA',
+            '  $jogos - Lista jogos e diversão',
             '',
-            'Use $help <comando> para mais detalhes.'
+            'Use $menu para ver a lista completa.'
         ].join('\n');
         
         await msg.reply(response);

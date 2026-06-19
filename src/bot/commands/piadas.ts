@@ -1,4 +1,3 @@
-// Piadas do astabot - migradas para o bot-wpp
 export const pia = [
   "Por que o livro de matemática se suicidou? Porque tinha muitos problemas.",
   "O que o zero disse para o oito? Belo cinto!",

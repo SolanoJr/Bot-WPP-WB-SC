@@ -1,8 +1,6 @@
 import { ICommand } from './types';
-// Adjusted path to correctly locate aiService.js which resides in the top-level 'services' directory.
 const { askAI } = require('../../../services/aiService');
-// Corrected path to databaseService located under src/services.
-const { getDb } = require('../../services/databaseService');
+const { getDb } = require('../../../services/databaseService');
 import logger from '../../services/loggerService';
 
 export const perguntaCommand: ICommand = {
@@ -20,7 +18,6 @@ export const perguntaCommand: ICommand = {
     const groupId = msg.from;
 
     try {
-      // Log de uso no banco de dados
       const db = await getDb();
       await db.run(
         'INSERT INTO command_logs (command_name, user_id, group_id) VALUES (?, ?, ?)',
@@ -29,7 +26,7 @@ export const perguntaCommand: ICommand = {
 
       logger.info(`IA Question: [${userId}] ${prompt}`);
 
-      // Chamada para a IA
+      await msg.reply('⏳ Processando sua pergunta na IA...');
       const response = await askAI(prompt, userId);
       await msg.reply(response);
 

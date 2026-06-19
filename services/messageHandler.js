@@ -43,7 +43,7 @@ async function processMessage(msg, client, commands) {
         try {
             await command.execute(msg, client, args);
         } catch (error) {
-            console.error(`❌ Erro no comando !${commandName}:`, error.message);
+            console.error(`❌ Erro no comando $${commandName}:`, error.message);
             await msg.reply('⚠️ Ocorreu um erro interno ao executar este comando.');
         }
     } else {

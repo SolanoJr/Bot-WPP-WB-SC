@@ -65,7 +65,7 @@ function createMockMessage(body, isGroup = false) {
 async function runTest(commandLine, isGroup = false) {
     console.log(`${colors.yellow}>> Testando: ${commandLine} (Grupo: ${isGroup})${colors.reset}`);
     
-    const COMMAND_PREFIX = '!';
+    const COMMAND_PREFIX = '$';
     if (!commandLine.startsWith(COMMAND_PREFIX)) return;
 
     const args = commandLine.slice(COMMAND_PREFIX.length).trim().split(/ +/);
@@ -89,10 +89,10 @@ async function runTest(commandLine, isGroup = false) {
 
 async function startValidations() {
     // 1. Testar Ping
-    await runTest('!ping', false);
+    await runTest('$ping', false);
     
     // 2. Testar Help
-    await runTest('!help', false);
+    await runTest('$help', false);
     
     // 3. Testar BemVindo (Num grupo)
     await runTest('!bemvindo', true);
@@ -101,10 +101,10 @@ async function startValidations() {
     await runTest('!bemvindo', false);
 
     // 5. Testar Feedback
-    await runTest('!feedback Este é um teste automatizado de feedback.', false);
+    await runTest('$feedback Este é um teste automatizado de feedback.', false);
     
     // 6. Testar OndeEstou
-    await runTest('!ondeestou', false);
+    await runTest('$ondeestou', false);
     
     console.log(`${colors.green}✅ Pré-validação finalizada.${colors.reset}`);
 }

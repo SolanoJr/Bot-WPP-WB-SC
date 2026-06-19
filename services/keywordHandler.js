@@ -28,11 +28,7 @@ async function handleKeywords(msg, client) {
     }
 
     // 2. Trigger Sarcástico para "bot"
-    const configuredPrefix = (process.env.COMMAND_PREFIX || '!').trim();
-    const alternatePrefix = configuredPrefix === '$' ? '!' : '$';
-    const commandPrefixes = [configuredPrefix, alternatePrefix];
-
-    const isCommand = commandPrefixes.some((prefix) => msg.body.startsWith(prefix));
+    const isCommand = msg.body.startsWith('$');
     if (body.includes('bot') && !isCommand) {
         await msg.reply(getSarcasticResponse());
         return true;
