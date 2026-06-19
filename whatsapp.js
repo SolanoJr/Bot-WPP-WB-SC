@@ -8,7 +8,11 @@ require('dotenv').config();
 const whatsappSingleton = require('./services/whatsappSingleton');
 const { isMaster } = require('./services/permissions');
 
+<<<<<<< HEAD
 // Importar carregador de comandos TypeScript
+=======
+// Importar carregador de comandos compilados (o bundle está em dist/bot/index.js)
+>>>>>>> 864095ddb81a0eb1e4887586562e2b5309970b55
 const { loadCommands } = require('./dist/bot/index.js');
 const { processMessage } = require('./services/messageHandler');
 
