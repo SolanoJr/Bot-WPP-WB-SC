@@ -36,10 +36,29 @@ export const sendMessageCommand: ICommand = {
     }
     
     const message = messageParts.join(' ');
-    const chatId = `${number}@c.us`;
-    console.log('[SENDMSG] Chat ID final:', chatId);
+    let chatId = `${number}@c.us`;
+    console.log('[SENDMSG] Chat ID inicial:', chatId);
 
     try {
+      // Tentar obter o ID correto usando getNumberId
+      try {
+        const numberId = await client.getNumberId(number);
+        if (numberId) {
+          chatId = numberId._serialized;
+          console.log('[SENDMSG] ID obtido via getNumberId:', chatId);
+        }
+      } catch (e) {
+        console.log('[SENDMSG] Erro ao usar getNumberId, usando formato padrão:', e);
+      }
+
+      // Tentar obter contato para verificar se existe
+      try {
+        const contact = await client.getContactById(chatId);
+        console.log('[SENDMSG] Contato encontrado:', contact.number || contact.id._serialized);
+      } catch (e) {
+        console.log('[SENDMSG] Contato não encontrado:', e);
+      }
+
       await client.sendMessage(chatId, message);
       await msg.reply(`✅ Mensagem enviada para ${rawNumber}`);
       logger.info(`Mensagem enviada para ${rawNumber}: ${message}`);
