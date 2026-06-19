@@ -161,8 +161,6 @@ class WhatsAppSingleton {
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
-                    '--single-process',
-                    '--no-zygote',
                     '--disable-gpu',
                     '--disable-web-security',
                     '--disable-features=VizDisplayCompositor'
@@ -209,6 +207,10 @@ class WhatsAppSingleton {
 
         this.client.on('authenticated', () => {
             console.log(`✅ [SINGLETON-${this.instanceId}] Sessão autenticada com sucesso!`);
+        });
+
+        this.client.on('loading_screen', (percent, message) => {
+            console.log(`⏳ [SINGLETON-${this.instanceId}] Carregando WhatsApp: ${percent}% - ${message}`);
         });
 
         this.client.on('auth_failure', (msg) => {

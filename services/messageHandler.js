@@ -31,8 +31,12 @@ async function processMessage(msg, client, commands) {
 
     if (!prefix) return;
 
-    const args = msg.body.slice(prefix.length).trim().split(/ +/);
-    const commandName = args.shift().toLowerCase();
+    const body = msg.body || '';
+    if (!body.startsWith(prefix)) return;
+
+    const args = body.slice(prefix.length).trim().split(/ +/);
+    const commandName = (args.shift() || '').toLowerCase();
+    if (!commandName) return;
     const command = commands.get(commandName);
 
     if (command) {
