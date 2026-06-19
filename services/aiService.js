@@ -1,6 +1,6 @@
 const axios = require('axios');
 require('dotenv').config();
-const { getDb } = require('../src/services/databaseService'); // Importando DB para memória
+const { getDb } = require('./databaseService'); // Importando DB para memória
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
