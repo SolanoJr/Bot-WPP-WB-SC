@@ -8,8 +8,8 @@ require('dotenv').config();
 const whatsappSingleton = require('./services/whatsappSingleton');
 const { isMaster } = require('./services/permissions');
 
-// Importar carregador de comandos TypeScript
-const { loadCommands } = require('./dist/bot/commands/index.js');
+// Importar carregador de comandos compilados (o bundle está em dist/bot/index.js)
+const { loadCommands } = require('./dist/bot/index.js');
 const { processMessage } = require('./services/messageHandler');
 
 // Obter instância única de forma assíncrona

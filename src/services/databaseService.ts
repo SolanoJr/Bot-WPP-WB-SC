@@ -51,6 +51,17 @@ export async function initDatabase() {
     );
   `);
 
+  // Tabela de Histórico da IA (Memória de Contexto)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS ai_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT,
+      prompt TEXT,
+      response TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   return db;
 }
 

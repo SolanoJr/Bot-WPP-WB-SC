@@ -1,5 +1,6 @@
 import { ICommand } from './types';
 import { feedbackCommand } from './feedback';
+import { statsCommand } from './stats';
 import { helpCommand } from './help';
 import { menuCommand } from './menu';
 import { pingCommand } from './ping';
@@ -21,6 +22,8 @@ import { antispamCommand } from './antispam';
 import { conselhoCommand } from './conselho';
 import { conselhobCommand } from './conselhob';
 import { aleatoriaCommand } from './aleatoria';
+import { perguntaCommand } from './pergunta';
+import { sendMessageCommand } from './sendMessage';
 
 // Registro de todos os comandos
 export const commands: Map<string, ICommand> = new Map();
@@ -50,6 +53,10 @@ export function loadCommands(): Map<string, ICommand> {
     registerCommand(sorteioCommand);
     registerCommand(climaCommand);
     registerCommand(feedbackCommand);
+    registerCommand(statsCommand);
+    registerCommand(perguntaCommand);
+    // comando para enviar mensagem arbitrária
+    registerCommand(sendMessageCommand);
     registerCommand(nickCommand);
     registerCommand(gttsCommand);
     // New commands from astabot
@@ -67,5 +74,5 @@ export function loadCommands(): Map<string, ICommand> {
 }
 
 // Exportar comandos individuais para uso em testes
-export { helpCommand, menuCommand, pingCommand, aliveCommand, banCommand, kickCommand, muteCommand, promoteCommand, forcaCommand, velhaCommand, sorteioCommand, climaCommand, feedbackCommand, nickCommand, gttsCommand };
+export { helpCommand, menuCommand, pingCommand, aliveCommand, banCommand, kickCommand, muteCommand, promoteCommand, forcaCommand, velhaCommand, sorteioCommand, climaCommand, feedbackCommand, statsCommand, perguntaCommand, nickCommand, gttsCommand };
 export { jokesCommand, voteCommand, delVoteCommand, votoCommand, addCmdCommand, antispamCommand, conselhoCommand, conselhobCommand, aleatoriaCommand };
