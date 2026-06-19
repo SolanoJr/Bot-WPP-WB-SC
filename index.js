@@ -1,3 +1,3 @@
-const { startBot } = require('./whatsapp');
+const { startBot } = require('./dist/whatsapp');
 
 startBot();
