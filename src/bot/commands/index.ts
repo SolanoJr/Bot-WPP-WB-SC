@@ -34,6 +34,9 @@ import { infoCommand } from './info';
 import { adminCommand } from './admin';
 import { gruposCommand } from './grupos';
 import { noticiasCommand } from './noticias';
+import { banidosCommand } from './banidos';
+import { setwelcomeCommand } from './setwelcome';
+import { cantadaCommand, fakechatCommand } from './interacao';
 
 // Registro de todos os comandos
 export const commands: Map<string, ICommand> = new Map();
@@ -91,6 +94,10 @@ export function loadCommands(): Map<string, ICommand> {
     registerCommand(adminCommand);
     registerCommand(gruposCommand);
     registerCommand(noticiasCommand);
+    registerCommand(banidosCommand);
+    registerCommand(setwelcomeCommand);
+    registerCommand(cantadaCommand);
+    registerCommand(fakechatCommand);
     
     return commands;
 }
