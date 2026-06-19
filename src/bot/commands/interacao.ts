@@ -1,5 +1,5 @@
 import { ICommand } from './types';
-import { askAI } from '../../../services/aiService';
+import { askAI } from '../../services/aiService';
 
 export const cantadaCommand: ICommand = {
     name: 'cantada',
