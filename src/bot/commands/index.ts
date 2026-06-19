@@ -31,6 +31,9 @@ import { lembreteCommand } from './lembrete';
 import { bemvindoCommand } from './bemvindo';
 import { shutdownCommand } from './shutdown';
 import { infoCommand } from './info';
+import { adminCommand } from './admin';
+import { gruposCommand } from './grupos';
+import { noticiasCommand } from './noticias';
 
 // Registro de todos os comandos
 export const commands: Map<string, ICommand> = new Map();
@@ -85,6 +88,9 @@ export function loadCommands(): Map<string, ICommand> {
     registerCommand(bemvindoCommand);
     registerCommand(shutdownCommand);
     registerCommand(infoCommand);
+    registerCommand(adminCommand);
+    registerCommand(gruposCommand);
+    registerCommand(noticiasCommand);
     
     return commands;
 }
