@@ -3,7 +3,7 @@ import { open } from 'sqlite';
 import path from 'path';
 import fs from 'fs';
 
-const DB_DIR = 'data';
+const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = 'bot_database.db';
 
 // Garante que a pasta data existe
@@ -11,7 +11,7 @@ if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }
 
-const dbPath = path.join(process.cwd(), DB_DIR, DB_FILE);
+const dbPath = path.join(DB_DIR, DB_FILE);
 
 export async function initDatabase() {
   const db = await open({

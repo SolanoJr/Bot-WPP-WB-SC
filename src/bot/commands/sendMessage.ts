@@ -26,7 +26,11 @@ export const sendMessageCommand: ICommand = {
     }
 
     // Remove caracteres não numéricos e garante o formato do chatId do WhatsApp
-    const number = rawNumber.replace(/[^0-9]/g, '');
+    let number = rawNumber.replace(/[^0-9]/g, '');
+    // Adicionar código do país Brasil se não tiver
+    if (number.length === 11) {
+      number = '55' + number;
+    }
     const message = messageParts.join(' ');
     const chatId = `${number}@c.us`;
 
