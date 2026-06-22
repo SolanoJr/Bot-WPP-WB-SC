@@ -1,6 +1,6 @@
 import axios from 'axios';
-const { handleKeywords } = require('../../services/keywordHandler');
-const { handleModeration } = require('../../services/moderationService');
+import { handleKeywords } from './keywordHandler';
+import { handleModeration } from './moderationService';
 
 /**
  * Handler centralizado para todas as mensagens recebidas
