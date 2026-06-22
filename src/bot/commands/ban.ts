@@ -14,12 +14,16 @@ export const banCommand: ICommand = {
                 return;
             }
             
-            // Verificar se o bot é admin
-            const botParticipant = participants.find((p: any) => p.isMe);
-            const isBotAdmin = botParticipant?.isAdmin || botParticipant?.isSuperAdmin;
+            // Verificar se quem mandou é admin (não o bot)
+            const senderParticipant = participants.find((p: any) => p.id._serialized === (msg.author || msg.from));
+            const isSenderAdmin = senderParticipant?.isAdmin || senderParticipant?.isSuperAdmin;
             
-            if (!isBotAdmin) {
-                await msg.reply('❌ O bot precisa ser administrador para usar este comando.');
+            console.log('Debug ban - Sender:', msg.author || msg.from);
+            console.log('Debug ban - Is sender admin:', isSenderAdmin);
+            console.log('Debug ban - Participants count:', participants.length);
+            
+            if (!isSenderAdmin) {
+                await msg.reply('❌ Você precisa ser administrador para usar este comando.');
                 return;
             }
             
@@ -31,6 +35,7 @@ export const banCommand: ICommand = {
             }
             
             const userToBan = mentioned[0];
+            console.log('Debug ban - User to ban:', userToBan);
             
             // Verificar se o usuário a ser banido é admin
             const userParticipant = participants.find((p: any) => p.id._serialized === userToBan);
@@ -48,6 +53,8 @@ export const banCommand: ICommand = {
                 const messages = await chat.fetchMessages({ limit: 100 });
                 const userMessages = messages.filter((m: any) => m.author === userToBan);
                 
+                console.log('Debug ban - Messages to delete:', userMessages.length);
+                
                 for (const message of userMessages) {
                     try {
                         await message.delete(true);
@@ -63,6 +70,7 @@ export const banCommand: ICommand = {
             try {
                 // Remover usuário do grupo
                 await chat.removeParticipants([userToBan]);
+                console.log('Debug ban - User removed successfully');
             } catch (error: any) {
                 console.error('Erro ao remover usuário:', error);
                 await msg.reply(`⚠️ Erro ao remover usuário: ${error.message}`);
