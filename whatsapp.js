@@ -10,7 +10,7 @@ const { isMaster } = require('./services/permissions');
 const { processMessage } = require('./services/messageHandler');
 
 // Importar carregador de comandos compilados (o bundle está em dist/bot/index.js)
-const { loadCommands } = require('./dist/bot/index.js');
+const { loadCommands } = require('./dist/bot/index');
 
 // Obter instância única de forma assíncrona
 let client;
