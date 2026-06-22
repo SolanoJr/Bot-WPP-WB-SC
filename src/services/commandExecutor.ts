@@ -1,5 +1,5 @@
-const replyService = require('../../services/replyService');
-const usageService = require('../../services/usageService');
+import { sendError } from './replyService';
+import { registerUsage } from './usageService';
 
 interface CommandContext {
     message: any;
@@ -22,7 +22,7 @@ const executeCommand = async (command: any, context: CommandContext): Promise<Co
     try {
         const value = await command.execute(context.message, context.args, context);
 
-        usageService.registerUsage(command.name, context.message.from);
+        registerUsage(command.name, context.message.from);
 
         console.log(`Comando executado com sucesso: ${commandName}`);
 
@@ -34,7 +34,7 @@ const executeCommand = async (command: any, context: CommandContext): Promise<Co
         };
     } catch (error: any) {
         console.error(`Erro ao executar comando ${commandName}:`, error);
-        await replyService.sendError(context, 'Erro ao executar comando');
+        await sendError(context, 'Erro ao executar comando');
 
         return {
             success: false,

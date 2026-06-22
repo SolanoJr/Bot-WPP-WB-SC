@@ -1,4 +1,4 @@
-const { validateNumber } = require('../../services/validationService');
+import { validateNumber } from './validationService';
 
 interface Context {
     message: any;
