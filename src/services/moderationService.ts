@@ -34,9 +34,12 @@ interface AnalysisResult {
 }
 
 const analyzeMessage = (message: any = {}): AnalysisResult => {
-    const text = normalizeText(message.body);
+    // Combine body and caption (if present) for analysis. Captions are used for media messages.
+    const rawText = `${message.body || ''} ${message.caption || ''}`;
+    const text = normalizeText(rawText);
 
     if (!text) {
+        // No textual content to analyze (e.g., pure sticker without caption)
         return { isSpam: false, reason: '' };
     }
 
@@ -47,6 +50,7 @@ const analyzeMessage = (message: any = {}): AnalysisResult => {
         seenUsers.add(userId);
     }
 
+    // Check for suspicious keywords first
     if (hasSuspiciousKeyword(text)) {
         return {
             isSpam: true,
@@ -54,6 +58,7 @@ const analyzeMessage = (message: any = {}): AnalysisResult => {
         };
     }
 
+    // Then check for suspicious links
     if (hasSuspiciousLink(text)) {
         if (isFirstMessage) {
             return {
@@ -61,10 +66,17 @@ const analyzeMessage = (message: any = {}): AnalysisResult => {
                 reason: 'link enviado na primeira mensagem'
             };
         }
-
         return {
             isSpam: true,
             reason: 'link suspeito detectado'
+        };
+    }
+
+    // Additional safeguard for media messages with suspicious caption
+    if ((message.type === 'sticker' || message.type === 'image') && hasSuspiciousKeyword(text)) {
+        return {
+            isSpam: true,
+            reason: 'conteúdo suspeito em mídia (sticker ou imagem)'
         };
     }
 
