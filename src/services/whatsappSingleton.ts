@@ -18,6 +18,17 @@ function resolveChromeExecutablePath(): string | undefined {
         return undefined;
     }
 
+    const cacheRoot = path.join(process.env.HOME || '', '.cache/puppeteer/chrome');
+    if (fs.existsSync(cacheRoot)) {
+        const versions = fs.readdirSync(cacheRoot).sort().reverse();
+        for (const version of versions) {
+            const bundledChrome = path.join(cacheRoot, version, 'chrome-linux64', 'chrome');
+            if (fs.existsSync(bundledChrome)) {
+                return bundledChrome;
+            }
+        }
+    }
+
     const candidates = [
         '/usr/bin/google-chrome-stable',
         '/usr/bin/chromium-browser',
@@ -73,12 +84,12 @@ class WhatsAppSingleton {
                 }
             } else {
                 try {
-                    execSync('pkill -9 -f chrome', { timeout: 5000 });
+                    execSync('pkill -9 -f "chrome.*wwebjs_auth"', { timeout: 5000 });
                 } catch (_error) {
                     // Ignorar se nenhum processo encontrado
                 }
                 try {
-                    execSync('pkill -9 -f puppeteer', { timeout: 5000 });
+                    execSync('pkill -9 -f "chrome.*bot-wpp-session"', { timeout: 5000 });
                 } catch (_error) {
                     // Ignorar se nenhum processo encontrado
                 }
@@ -210,6 +221,7 @@ class WhatsAppSingleton {
                 headless: true,
                 executablePath: chromePath,
                 timeout: PUPPETEER_LAUNCH_TIMEOUT_MS,
+                pipe: true,
                 handleSIGINT: false,
                 handleSIGTERM: false,
                 args: [
@@ -236,7 +248,15 @@ class WhatsAppSingleton {
             console.log(`✅ [SINGLETON] Client inicializado com sucesso: ${this.instanceId}`);
         } catch (err) {
             this.isInitialized = false;
+            if (this.client) {
+                try {
+                    await this.client.destroy();
+                } catch {
+                    // ignore destroy errors during failed init
+                }
+            }
             this.client = null;
+            await this.cleanupOrphanedProcesses();
             this.cleanup();
             console.error('❌ [SINGLETON] FALHA CRÍTICA NA INICIALIZAÇÃO DO PUPPETEER:', err);
             throw err;

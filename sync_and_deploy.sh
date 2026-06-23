@@ -30,6 +30,9 @@ git pull origin main | tee -a "$LOG_FILE"
 log "Instalando dependências (npm ci)…"
 npm ci | tee -a "$LOG_FILE"
 
+log "Garantindo Chrome compatível com Puppeteer…"
+npx puppeteer browsers install chrome | tee -a "$LOG_FILE"
+
 log "Compilando projeto (npm run build)…"
 npm run build | tee -a "$LOG_FILE"
 

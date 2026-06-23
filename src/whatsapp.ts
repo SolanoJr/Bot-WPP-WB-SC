@@ -277,30 +277,39 @@ const startLocationPolling = () => {
 };
 
 // Inicializar sistema com verificações críticas
+const INIT_MAX_ATTEMPTS = 3;
+const INIT_RETRY_DELAY_MS = 15_000;
+
 export const startBot = async () => {
     console.log('🚀 [BOT] INICIANDO PROCESSO DE START...');
-    try {
-        // 1. Executar verificações críticas (Não bloqueante)
-        preFlightCheck().catch(err => {
-            console.error('❌❌❌ [ERRO CRÍTICO NO PREFLIGHT] ❌❌❌');
-            console.error(err);
-        });
-        
-        // 2. Inicializar client do WhatsApp
-        console.log('⏳ [BOT] Chamando initializeClient...');
-        await initializeClient();
-        console.log('✅ [BOT] initializeClient concluído!');
-        
-        // 3. Iniciar polling quando client estiver pronto
-        setTimeout(() => {
-            startLocationPolling();
-        }, 15000); // Aguardar 15s para garantir que client está pronto
 
-        // Mantém o processo ativo indefinidamente
-        await new Promise(() => {});
-    } catch (error: any) {
-        console.error('🛑 [BOT] Falha na inicialização:', error.message);
-        process.exit(1);
+    preFlightCheck().catch(err => {
+        console.error('❌❌❌ [ERRO CRÍTICO NO PREFLIGHT] ❌❌❌');
+        console.error(err);
+    });
+
+    for (let attempt = 1; attempt <= INIT_MAX_ATTEMPTS; attempt++) {
+        try {
+            console.log(`⏳ [BOT] Tentativa de inicialização ${attempt}/${INIT_MAX_ATTEMPTS}...`);
+            await initializeClient();
+            console.log('✅ [BOT] initializeClient concluído!');
+
+            setTimeout(() => {
+                startLocationPolling();
+            }, 15000);
+
+            await new Promise(() => {});
+        } catch (error: any) {
+            console.error(`🛑 [BOT] Falha na tentativa ${attempt}:`, error.message);
+
+            if (attempt >= INIT_MAX_ATTEMPTS) {
+                console.error('🛑 [BOT] Esgotadas todas as tentativas de inicialização.');
+                process.exit(1);
+            }
+
+            console.log(`⏳ [BOT] Aguardando ${INIT_RETRY_DELAY_MS / 1000}s antes de tentar novamente...`);
+            await new Promise(resolve => setTimeout(resolve, INIT_RETRY_DELAY_MS));
+        }
     }
 };
 
