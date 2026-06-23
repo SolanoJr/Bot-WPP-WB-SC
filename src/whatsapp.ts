@@ -24,9 +24,8 @@ const getWarriorAuthKeyOrExit = () => {
     const key = String(process.env.WARRIOR_AUTH_KEY || '').trim();
 
     if (key.length !== WARRIOR_AUTH_KEY_LENGTH) {
-        console.error(`[BOT-CONFIG] WARRIOR_AUTH_KEY invalida: esperado exatamente ${WARRIOR_AUTH_KEY_LENGTH} caracteres, recebido ${key.length}.`);
-        console.error('[BOT-CONFIG] Corrija a WARRIOR_AUTH_KEY no ambiente/.env antes de iniciar o Bot.');
-        process.exit(1);
+        console.warn(`⚠️ [BOT-CONFIG] WARRIOR_AUTH_KEY tem tamanho inesperado: ${key.length} (esperado ${WARRIOR_AUTH_KEY_LENGTH}).`);
+        console.warn('⚠️ [BOT-CONFIG] Continuando mesmo assim para permitir conexão...');
     }
 
     return key;
@@ -277,12 +276,18 @@ const startLocationPolling = () => {
 
 // Inicializar sistema com verificações críticas
 export const startBot = async () => {
+    console.log('🚀 [BOT] INICIANDO PROCESSO DE START...');
     try {
         // 1. Executar verificações críticas (Não bloqueante)
-        preFlightCheck().catch(err => console.error('⚠️ [BOT] Erro silencioso no preFlightCheck:', err.message));
+        preFlightCheck().catch(err => {
+            console.error('❌❌❌ [ERRO CRÍTICO NO PREFLIGHT] ❌❌❌');
+            console.error(err);
+        });
         
         // 2. Inicializar client do WhatsApp
+        console.log('⏳ [BOT] Chamando initializeClient...');
         await initializeClient();
+        console.log('✅ [BOT] initializeClient concluído!');
         
         // 3. Iniciar polling quando client estiver pronto
         setTimeout(() => {
