@@ -11,7 +11,7 @@ import { processMessage } from './services/messageHandler';
 
 // Importar carregador de comandos compilados (o bundle está em dist/bot/index.js)
 // Como estamos migrando tudo, podemos importar direto do src ou usar o carregador dinâmico
-const { loadCommands } = require('./bot/commands/index');
+import { loadCommands } from './bot/commands/index';
 
 // Obter instância única de forma assíncrona
 let client: any;
