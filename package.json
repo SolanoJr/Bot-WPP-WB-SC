@@ -12,7 +12,7 @@
     "build:main": "tsup src/whatsapp.ts --out-dir dist --format cjs",
     "build:core": "tsup src/core/index.ts --out-dir dist/core --format cjs",
     "start": "node dist/relay/server.js",
-    "bot:start": "node dist/whatsapp.js",
+    "bot:start": "node dist/core/index.js",
     "test": "vitest run",
     "test-commands": "node test_commands.js",
     "test:watch": "vitest"

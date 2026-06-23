@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'bot-wpp',
-    script: './dist/whatsapp.js',
+    script: './dist/core/index.js',
     cwd: '/home/solanojr/bot-wpp',
     instances: 1,
     autorestart: true,
