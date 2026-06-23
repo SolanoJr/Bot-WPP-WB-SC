@@ -293,4 +293,5 @@ class WhatsAppSingleton {
 
 // Exportar singleton global
 const whatsappSingleton = new WhatsAppSingleton();
+export { whatsappSingleton };
 export default whatsappSingleton;
