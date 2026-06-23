@@ -2,15 +2,16 @@ import qrcode from 'qrcode-terminal';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
-require('dotenv').config();
+import 'dotenv/config';
 
 // 🚯 USAR SINGLETON GLOBAL - ÚNICO PONTO DE CRIAÇÃO DO CLIENT
 import whatsappSingleton from './services/whatsappSingleton';
 import { isMaster } from './services/permissions';
 import { processMessage } from './services/messageHandler';
 
-// Importar carregador de comandos TypeScript
-import { loadCommands } from './bot/index';
+// Importar carregador de comandos compilados (o bundle está em dist/bot/index.js)
+// Como estamos migrando tudo, podemos importar direto do src ou usar o carregador dinâmico
+const { loadCommands } = require('./bot/commands/index');
 
 // Obter instância única de forma assíncrona
 let client: any;
@@ -19,7 +20,7 @@ let client: any;
 const commands = loadCommands();
 const WARRIOR_AUTH_KEY_LENGTH = 16;
 
-const getWarriorAuthKeyOrExit = (): string => {
+const getWarriorAuthKeyOrExit = () => {
     const key = String(process.env.WARRIOR_AUTH_KEY || '').trim();
 
     if (key.length !== WARRIOR_AUTH_KEY_LENGTH) {
@@ -32,7 +33,7 @@ const getWarriorAuthKeyOrExit = (): string => {
 };
 
 // 🔍 PREFLIGHT CHECK - Testa conexões críticas antes de iniciar
-const preFlightCheck = async (): Promise<boolean> => {
+const preFlightCheck = async () => {
     console.log('🔍 [PREFLIGHT] Iniciando verificações críticas...');
     const warriorAuthKey = getWarriorAuthKeyOrExit();
 
@@ -89,7 +90,7 @@ const preFlightCheck = async (): Promise<boolean> => {
     }
 
     // -------- Sistema de arquivos --------
-    const authPath = path.join(__dirname, '.wwebjs_auth');
+    const authPath = path.join(process.cwd(), '.wwebjs_auth');
     if (!fs.existsSync(authPath)) {
         console.log('📁 [PREFLIGHT] Criando pasta de autenticação...');
         fs.mkdirSync(authPath, { recursive: true });
@@ -107,7 +108,7 @@ const preFlightCheck = async (): Promise<boolean> => {
 const startLocationPolling = () => {
     const RELAY_URL = 'https://bot-wpp-relay.onrender.com';
     const POLLING_INTERVAL = 15000; // 15 segundos (equilíbrio)
-    const processedLocations = new Set<string>(); // Evitar duplicação
+    const processedLocations = new Set(); // Evitar duplicação
     const pendingChatIds = new Set<string>(); // Rastrear chatIds que esperam localização
 
     const checkPendingLocations = async () => {
@@ -193,7 +194,7 @@ const startLocationPolling = () => {
             console.log(`📍 [POLLING] Coordenadas extraídas (Float) - Lat: ${lat}, Lon: ${lon}`);
 
             // 🔒 FALLBACK: Verificar se coordenadas são válidas
-            if (!lat || !lon || lat === 'undefined' as any || lon === 'undefined' as any) {
+            if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
                 console.error(`❌ [POLLING] Coordenadas inválidas - Lat: ${lat}, Lon: ${lon}`);
                 console.error(`❌ [POLLING] Dados completos recebidos:`, JSON.stringify(location, null, 2));
                 return; // Não enviar mensagem com link quebrado
@@ -222,15 +223,15 @@ const startLocationPolling = () => {
                 '',
                 contactInfo,
                 chatInfo,
-                `🕐 **Data/Hora:** ${new Date(timestamp).toLocaleString('pt-BR')}`,
+                `🕒 **Data/Hora:** ${new Date(timestamp).toLocaleString('pt-BR')}`,
                 '',
                 '🗺️ **LOCALIZAÇÃO:**',
-                '📍 Localização em tempo real', // Preparado para Reverse Geocoding
+                `📍 Localização em tempo real`, // Preparado para Reverse Geocoding
                 '',
-                '🔗 **Google Maps:**',
+                `🗺️ **Google Maps:**`,
                 `🔗 https://www.google.com/maps?q=${lat},${lon}`,
                 '',
-                '📍 **Coordenadas:**',
+                `📍 **Coordenadas:**`,
                 `▸ Latitude: ${lat}`,
                 `▸ Longitude: ${lon}`,
                 '',
@@ -275,7 +276,7 @@ const startLocationPolling = () => {
 };
 
 // Inicializar sistema com verificações críticas
-const startBot = async () => {
+export const startBot = async () => {
     try {
         // 1. Executar verificações críticas
         await preFlightCheck();
@@ -288,9 +289,7 @@ const startBot = async () => {
             startLocationPolling();
         }, 15000); // Aguardar 15s para garantir que client está pronto
 
-        // Mantém o processo ativo indefinidamente. O polling (setInterval) já impede o exit,
-        // mas ao final do fluxo assíncrono o Node pode encerrar antes que o intervalo seja
-        // registrado. Esse await garante que o event loop continue vivo.
+        // Mantém o processo ativo indefinidamente
         await new Promise(() => {});
     } catch (error: any) {
         console.error('🛑 [BOT] Falha na inicialização:', error.message);
@@ -298,33 +297,21 @@ const startBot = async () => {
     }
 };
 
-// ---------------------------------------------------------------------------
-// Função responsável por obter a instância única do WhatsApp via singleton e
-// conectar os handlers necessários (mensagens, telemetry etc.).
-// Declarada como *function* para que seja hoisted e possa ser usada antes da
-// sua definição no código (chamada dentro de `startBot`).
-// ---------------------------------------------------------------------------
-function initializeClient() {
-    return (async () => {
-        // Obtém (ou cria) o cliente singleton
-        client = await whatsappSingleton.getClient();
-        console.log('✅ [WHATSAPP] Cliente obtido com sucesso');
+async function initializeClient() {
+    // Obtém (ou cria) o cliente singleton
+    client = await whatsappSingleton.getClient();
+    console.log('✅ [WHATSAPP] Cliente obtido com sucesso');
 
-        // Registro de eventos de mensagem usando o handler centralizado
-        client.on('message', async (msg: any) => {
-            await processMessage(msg, client, commands);
-        });
+    // Registro de eventos de mensagem usando o handler centralizado
+    client.on('message', async (msg: any) => {
+        await processMessage(msg, client, commands);
+    });
 
-        // Telemetria de ready (mantida aqui para compatibilidade) – já está no
-        // singleton, mas deixamos um log adicional
-        client.on('ready', () => {
-            console.log('🚀 [WHATSAPP] Bot está pronto e conectado');
-        });
+    // Telemetria de ready
+    client.on('ready', () => {
+        console.log('🚀 [WHATSAPP] Bot está pronto e conectado');
+    });
 
-        // Inicializa a sessão do WhatsApp
-        client.initialize();
-    })();
+    // Inicializa a sessão do WhatsApp
+    client.initialize();
 }
-
-// Exportar para uso no index.js
-export { startBot };
