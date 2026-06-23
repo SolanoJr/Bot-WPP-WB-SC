@@ -304,7 +304,15 @@ async function initializeClient() {
 
     // Registro de eventos de mensagem usando o handler centralizado
     client.on('message', async (msg: any) => {
+        console.log(`[EVENTO] Mensagem recebida de ${msg.from}: ${msg.body.substring(0, 20)}...`);
         await processMessage(msg, client, commands);
+    });
+    
+    client.on('message_create', async (msg: any) => {
+        if (msg.fromMe) {
+            console.log(`[EVENTO] Mensagem enviada por mim para ${msg.to}: ${msg.body.substring(0, 20)}...`);
+            await processMessage(msg, client, commands);
+        }
     });
 
     // Telemetria de ready
