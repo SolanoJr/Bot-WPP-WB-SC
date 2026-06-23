@@ -328,3 +328,8 @@ function initializeClient() {
 
 // Exportar para uso no index.js
 module.exports = { startBot };
+
+// Iniciar bot se este arquivo for executado diretamente
+if (require.main === module) {
+    startBot();
+}
