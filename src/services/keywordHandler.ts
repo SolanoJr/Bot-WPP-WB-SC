@@ -27,9 +27,10 @@ async function handleKeywords(msg: any, client: any): Promise<boolean> {
         return true;
     }
 
-    // 2. Trigger Sarcástico para "bot"
+    // 2. Trigger Sarcástico para "bot" (apenas se a palavra estiver isolada ou for o foco)
     const isCommand = msg.body.startsWith('$');
-    if (body.includes('bot') && !isCommand) {
+    const botMention = /\bbot\b/i.test(body);
+    if (botMention && !isCommand && body.length < 20) {
         await msg.reply(getSarcasticResponse());
         return true;
     }

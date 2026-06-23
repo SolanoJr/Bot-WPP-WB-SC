@@ -133,7 +133,9 @@ export const banCommand: ICommand = {
 
       try {
         // Bloquear contato
-        await client.blockContact(userToBan);
+        const contact = await client.getContactById(userToBan);
+        await contact.block();
+        console.log("Debug ban - Contact blocked successfully");
       } catch (error) {
         console.error("Erro ao bloquear contato:", error);
       }

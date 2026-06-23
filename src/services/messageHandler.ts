@@ -15,25 +15,26 @@ async function processMessage(msg: any, client: any, commands: Map<string, any>)
     console.log(`Conteúdo: ${msg.body}`);
     console.log(`---------------------\n`);
 
-    // 2. Auto-Moderação de Spam/Links/Apostas
-    const moderated = await handleModeration(client, msg);
-    if (moderated) {
-        console.log(`🛡️ [MODERATION] Mensagem moderada: ${msg.body}`);
-        return;
+    // 2. Ignorar moderação e interceptação para comandos legítimos
+    const body = msg.body || '';
+    const prefix = '$';
+    const isCommand = body.startsWith(prefix);
+
+    if (!isCommand) {
+        // 3. Auto-Moderação de Spam/Links/Apostas (apenas para não-comandos)
+        const moderated = await handleModeration(client, msg);
+        if (moderated) {
+            console.log(`🛡️ [MODERATION] Mensagem moderada: ${msg.body}`);
+            return;
+        }
+
+        // 4. Lógica de Palavras-Chave e Auto-Moderação (Separada)
+        const intercepted = await handleKeywords(msg, client);
+        if (intercepted) return;
     }
 
-    // 3. Lógica de Palavras-Chave e Auto-Moderação (Separada)
-    const intercepted = await handleKeywords(msg, client);
-    if (intercepted) return;
-
-    // 4. Processamento de Comandos
-    // Prefixo único: $ (comando customizado também usa $)
-    const prefix = '$';
-
-    if (!prefix) return;
-
-    const body = msg.body || '';
-    if (!body.startsWith(prefix)) return;
+    // 5. Processamento de Comandos
+    if (!isCommand) return;
 
     const args = body.slice(prefix.length).trim().split(/ +/);
     const commandName = (args.shift() || '').toLowerCase();
