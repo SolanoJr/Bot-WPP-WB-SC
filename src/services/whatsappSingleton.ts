@@ -214,11 +214,16 @@ class WhatsAppSingleton {
         if (!this.client) return;
 
         this.client.on('qr', (qr: string) => {
-            console.log(`📱 [SINGLETON-${this.instanceId}] QR Code gerado`);
-            console.log(`📱 [SINGLETON-${this.instanceId}] Escaneie com seu WhatsApp`);
+            console.log('\n' + '='.repeat(40));
+            console.log('📱 QR CODE DETECTADO! ESCANEIE ABAIXO:');
+            console.log('='.repeat(40) + '\n');
             
             // Exibir QR no terminal
             qrcodeTerminal.generate(qr, { small: true });
+            
+            console.log('\n' + '='.repeat(40));
+            console.log('Aguardando leitura...');
+            console.log('='.repeat(40) + '\n');
             
             // Salvar QR em arquivo para download
             try {
