@@ -5,9 +5,9 @@ const axios = require('axios');
 require('dotenv').config();
 
 // 🚯 USAR SINGLETON GLOBAL - ÚNICO PONTO DE CRIAÇÃO DO CLIENT
-const whatsappSingleton = require('./dist/services/whatsappSingleton').default;
-const { isMaster } = require('./dist/services/permissions').default;
-const { processMessage } = require('./dist/services/messageHandler').default;
+const whatsappSingleton = require('./services/whatsappSingleton');
+const { isMaster } = require('./services/permissions');
+const { processMessage } = require('./services/messageHandler');
 
 // Importar carregador de comandos compilados (o bundle está em dist/bot/index.js)
 const { loadCommands } = require(path.join(__dirname, './dist/bot/index.js'));
