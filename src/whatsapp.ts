@@ -278,8 +278,8 @@ const startLocationPolling = () => {
 // Inicializar sistema com verificações críticas
 export const startBot = async () => {
     try {
-        // 1. Executar verificações críticas
-        await preFlightCheck();
+        // 1. Executar verificações críticas (Não bloqueante)
+        preFlightCheck().catch(err => console.error('⚠️ [BOT] Erro silencioso no preFlightCheck:', err.message));
         
         // 2. Inicializar client do WhatsApp
         await initializeClient();
