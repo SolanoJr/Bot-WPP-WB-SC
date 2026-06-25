@@ -10,6 +10,7 @@ dotenv.config();
 import whatsappSingleton from './services/whatsappSingleton';
 import { isMaster } from './services/permissions';
 import { processMessage } from './services/messageHandler';
+ import { sendToTelegram } from './telegram/telegramBot';
 
 // Importar carregador de comandos compilados (o bundle está em dist/bot/index.js)
 // Como estamos migrando tudo, podemos importar direto do src ou usar o carregador dinâmico
@@ -321,6 +322,24 @@ async function initializeClient() {
     // Registro de eventos de mensagem usando o handler centralizado
     client.on('message', async (msg: any) => {
         console.log(`[EVENTO] Mensagem recebida de ${msg.from}: ${msg.body.substring(0, 20)}...`);
+
+        // Encaminhamento automático para o Telegram (Exemplo: Apresentações)
+        // Detecta se a mensagem parece ser uma apresentação (contém "nome:", "idade:", etc)
+        const content = (msg.body || '').toLowerCase();
+        if (content.includes('nome:') && (content.includes('idade:') || content.includes('cidade:'))) {
+            const chat = await msg.getChat();
+            const groupName = chat.isGroup ? chat.name : 'Privado';
+            const author = await msg.getContact();
+            const authorName = author.pushname || author.name || 'Desconhecido';
+
+            const forwardText = `📝 **Nova Apresentação (WhatsApp)**\n` +
+                              `👥 **Grupo:** ${groupName}\n` +
+                              `👤 **Usuário:** ${authorName}\n\n` +
+                              `${msg.body}`;
+
+            await sendToTelegram(forwardText);
+        }
+
         await processMessage(msg, client, commands);
     });
     
