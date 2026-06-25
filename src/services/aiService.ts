@@ -30,7 +30,8 @@ async function askAI(prompt: string, userId: string = 'unknown'): Promise<string
 
         // Use the Gemini Pro model via the stable v1 endpoint.
         // The previous v1beta endpoint returned NOT_FOUND for gemini-pro.
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+        // Updated to use Gemini 2.5 Flash model with stable v1 endpoint.
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
         
         // Personalidade: Estratégico, inteligente, levemente sarcástico e direto.
