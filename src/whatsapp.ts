@@ -357,7 +357,7 @@ async function handleMirroring(msg: any) {
         if (matches) {
             console.log('📋 [MIRROR] Apresentação detectada, espelhando para o Telegram...');
             const telegramBot = telegramBotSingleton.getBotInstance();
-            const telegramGroupId = process.env.TELEGRAM_GROUP_ID;
+            const telegramGroupId = process.env.TELEGRAM_GROUP_ID || process.env.TELEGRAM_CHAT_ID;
 
             if (telegramGroupId) {
                 const chat = await msg.getChat();
