@@ -117,7 +117,7 @@ export function loadCommands(): Map<string, ICommand> {
         
         if (isContext) {
           const ctx = ctxOrMsg;
-          const legacyMsg = createLegacyMessage(ctx.msg);
+          const legacyMsg = createLegacyMessage(ctx.msg, ctx);
           const legacyClient = createLegacyClient(ctx.client);
           await legacy.execute(legacyMsg, legacyClient, ctx.args);
         } else {
@@ -136,7 +136,7 @@ export function loadCommands(): Map<string, ICommand> {
   return commands;
 }
 
-function createLegacyMessage(msg: any): any {
+function createLegacyMessage(msg: any, ctx?: any): any {
   if (!msg) {
     // Guard clause for undefined message
     return {} as any;
@@ -153,11 +153,21 @@ function createLegacyMessage(msg: any): any {
     type: msg.mediaType,
     _data: { notifyName: msg.userName },
     reply: async (text: string, options?: any) => {
-      await msg.reply(text, options);
+      // Usar o reply do contexto se disponível, caso contrário tenta da mensagem
+      if (ctx && ctx.reply) {
+        await ctx.reply(text, options);
+      } else if (msg.reply) {
+        await msg.reply(text, options);
+      } else {
+        console.error('[createLegacyMessage] Nenhum método reply disponível');
+      }
     },
     getChat: async () => {
-      const chat = await msg.getChat();
-      return chat.raw;
+      if (ctx && ctx.getChat) {
+        const chat = await ctx.getChat();
+        return chat.raw || chat;
+      }
+      return { id: msg.chatId };
     },
   };
 }
