@@ -47,6 +47,23 @@ export class PlatformManager {
     }
     this.adapters.set(adapter.platform, adapter);
     console.log(`[PlatformManager] Adapter registrado: ${adapter.platform}`);
+    
+    // CRUCIAL: Conectar handler de mensagens
+    adapter.client.onMessage(async (msg: PlatformMessage) => {
+      await this.handleIncomingMessage(msg);
+    });
+    
+    // Conectar handler de ready
+    adapter.client.onReady(() => {
+      console.log(`[PlatformManager] ${adapter.platform} está pronto!`);
+      this.readyHandlers.forEach(handler => handler());
+    });
+    
+    // Conectar handler de desconexão
+    adapter.client.onDisconnected((reason: string) => {
+      console.log(`[PlatformManager] ${adapter.platform} desconectou: ${reason}`);
+      this.disconnectedHandlers.forEach(handler => handler(adapter.platform, reason));
+    });
   }
 
   /**
@@ -181,6 +198,40 @@ export class PlatformManager {
       case 'discord': return '!';
       default: return '$';
     }
+  }
+
+  /**
+   * Processa mensagem recebida de qualquer plataforma
+   */
+  private async handleIncomingMessage(message: PlatformMessage): Promise<void> {
+    // Ignorar mensagens do próprio bot
+    if (message.isFromMe) return;
+    
+    // Verificar se é comando (começa com $)
+    const PREFIX = '$';
+    if (!message.text.startsWith(PREFIX)) return;
+    
+    // Parsear comando e argumentos
+    const parts = message.text.slice(PREFIX.length).trim().split(/\s+/);
+    const commandName = parts[0].toLowerCase();
+    const args = parts.slice(1);
+    
+    // Atualizar mensagem com info do comando
+    message.isCommand = true;
+    message.commandName = commandName;
+    message.args = args;
+    
+    console.log(`[PlatformManager] Comando recebido: ${commandName} de ${message.userName} (${message.platform})`);
+    
+    // Buscar adapter da plataforma
+    const adapter = this.adapters.get(message.platform);
+    if (!adapter) {
+      console.error(`[PlatformManager] Adapter não encontrado para ${message.platform}`);
+      return;
+    }
+    
+    // Executar comando
+    await this.executeCommand(message, adapter);
   }
 
   /**
