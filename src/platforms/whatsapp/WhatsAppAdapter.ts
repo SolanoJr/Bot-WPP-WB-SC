@@ -20,6 +20,7 @@ import {
   MessageHandler
 } from './base/PlatformTypes';
 import { platformManager } from '../PlatformManager';
+import { enableAutoMod } from '../../services/autoModService';
 
 export class WhatsAppClient implements PlatformClient {
   readonly platform: PlatformType = 'whatsapp';
@@ -69,6 +70,16 @@ export class WhatsAppClient implements PlatformClient {
       this.userId = this.client.info?.wid._serialized || '';
       this.userName = this.client.info?.pushname || 'Bot-WPP';
       console.log(`[WhatsApp] ✅ Pronto como ${this.userName} (${this.userId})`);
+      
+      // Ativar sistema de moderação automática
+      enableAutoMod(this.client, {
+        enabled: true,
+        autoKickSpam: true,
+        autoKickCasino: true,
+        autoDeleteLinks: true,
+      });
+      console.log('[WhatsApp] 🛡️ AutoMod ativado');
+      
       if (this.readyHandler) this.readyHandler();
     });
 

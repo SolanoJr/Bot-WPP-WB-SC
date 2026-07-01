@@ -73,7 +73,7 @@ export const banCommand: ICommand = {
       const mentioned = msg.mentionedIds;
 
       if (!mentioned || mentioned.length === 0) {
-        await msg.reply("❌ Marque o usuário a ser banido.");
+        await msg.reply("❌ Marque o usuário a ser banido com @usuario.");
         return;
       }
 
@@ -100,21 +100,21 @@ export const banCommand: ICommand = {
       let deletedCount = 0;
 
       try {
-        // Apagar mensagens do usuário no grupo
-        const messages = await chat.fetchMessages({ limit: 100 });
+        // Apagar ÚLTIMA mensagem do usuário no grupo (mais eficiente e preciso)
+        const messages = await chat.fetchMessages({ limit: 50 });
 
-        const userMessages = messages.filter(
-          (m: any) => cleanId(m.author || "") === userToBanClean,
+        // Buscar a última mensagem do usuário (pode incluir view once, mídia, etc)
+        const lastUserMessage = messages.find(
+          (m: any) => cleanId(m.author || m.from || "") === userToBanClean && !m.fromMe,
         );
 
-        console.log("Debug ban - Messages to delete:", userMessages.length);
-
-        for (const message of userMessages) {
+        if (lastUserMessage) {
           try {
-            await message.delete(true);
-            deletedCount++;
+            await lastUserMessage.delete(true); // true = deletar para todos
+            deletedCount = 1;
+            console.log("Debug ban - Last message deleted");
           } catch (error) {
-            console.error("Erro ao apagar mensagem:", error);
+            console.error("Erro ao apagar última mensagem:", error);
           }
         }
       } catch (error) {
@@ -141,7 +141,9 @@ export const banCommand: ICommand = {
       }
 
       await msg.reply(
-        `✅ Usuário banido, ${deletedCount} mensagens apagadas e contato bloqueado.`,
+        `✅ Usuário banido com sucesso!\n` +
+        `🗑️ ${deletedCount > 0 ? 'Última mensagem apagada' : 'Nenhuma mensagem encontrada'}\n` +
+        `🚫 Contato bloqueado`,
       );
     } catch (error: any) {
       console.error("Erro ao executar comando ban:", error);
