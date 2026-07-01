@@ -212,12 +212,3 @@ export class TelegramAdapter implements PlatformAdapter {
     await this.client.shutdown();
   }
 }
-
-// Register the adapter automatically when this file is imported.
-const token = process.env.TELEGRAM_BOT_TOKEN;
-if (!token) {
-  console.warn('[TelegramAdapter] TELEGRAM_BOT_TOKEN not defined in .env – adapter will not be registered');
-} else {
-  const adapter = new TelegramAdapter(token);
-  platformManager.registerAdapter(adapter);
-}

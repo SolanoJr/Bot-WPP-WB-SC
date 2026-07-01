@@ -207,12 +207,3 @@ export class DiscordAdapter implements PlatformAdapter {
     await this.client.shutdown();
   }
 }
-
-// Registro automático do adapter caso exista o token.
-const token = process.env.DISCORD_BOT_TOKEN;
-if (!token) {
-  console.warn('[DiscordAdapter] DISCORD_BOT_TOKEN não definido – adapter não será registrado');
-} else {
-  const adapter = new DiscordAdapter(token);
-  platformManager.registerAdapter(adapter);
-}
