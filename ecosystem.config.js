@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'bot-wpp',
-    script: './dist/core/index.js',
+    script: './dist/core/multiPlatform.js',
     cwd: '/home/solanojr/bot-wpp',
     instances: 1,
     exec_mode: 'fork',

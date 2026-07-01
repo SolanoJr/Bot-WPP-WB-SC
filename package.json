@@ -10,7 +10,7 @@
     "build:services": "tsup src/services/*.ts --out-dir dist/services --format cjs",
     "build:bot": "tsup src/bot/index.ts src/bot/config.ts src/bot/customCommands.ts src/bot/relayClient.ts src/bot/commands/*.ts --out-dir dist/bot --format cjs",
     "build:main": "tsup src/whatsapp.ts --out-dir dist --format cjs",
-    "build:core": "tsup src/core/index.ts --out-dir dist/core --format cjs",
+    "build:core": "tsup src/core/index.ts src/core/multiPlatform.ts --out-dir dist/core --format cjs",
     "start": "node dist/relay/server.js",
     "bot:start": "node dist/core/index.js",
     "test": "vitest run",
@@ -27,6 +27,7 @@
   "dependencies": {
     "axios": "^1.15.2",
     "cors": "^2.8.6",
+    "discord.js": "^14.16.3",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "lowdb": "^7.0.1",
@@ -34,6 +35,7 @@
     "qrcode-terminal": "^0.12.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^6.0.1",
+    "telegraf": "^4.16.3",
     "whatsapp-web.js": "^1.34.7",
     "winston": "^3.19.0"
   },
